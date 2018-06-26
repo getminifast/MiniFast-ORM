@@ -7,13 +7,13 @@ MiniFast ORM is a very little Object-Relational Mapping system. It will be usefu
 - [ ] Writing PHP classes from PHP array
 
 ### Task list - ORM
-- [ ] Base.php for inserting data into the database
+- [X] Base.php for inserting data into the database
 - [ ] BaseQuery.php for querying the database
 
 ## Documentation
 
 ### First of all
-You need to create a `.xml` file containing your databse scheme.
+You need to create a `.xml` file containing your databse scheme. All supported types and the syntax will be available soon.
 Example:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
