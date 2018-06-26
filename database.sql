@@ -1,0 +1,24 @@
+CREATE DATABASE IF NOT EXISTS main CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `user` (
+	`id` INT(11) PRIMARY KEY AUTO_INCREMENT,
+	`pseudo` VARCHAR(50),
+	`email` VARCHAR(139),
+	`password` VARCHAR(128),
+	`admin` BOOLEAN,
+	`image` TEXT,
+	`newsletter` BOOLEAN,
+	`email_public` BOOLEAN
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS `categorie` (
+	`id` INT(11) PRIMARY KEY AUTO_INCREMENT,
+	`name` VARCHAR(20)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS `topic` (
+	`id` INT(11) PRIMARY KEY AUTO_INCREMENT,
+	`categorie` INT(11)
+) ENGINE=InnoDB;
+
+ALERT TABLE `topic` ADD CONSTRAINT `FK_CategorieTopic` FOREIGN KEY (`categorie`) REFERENCES `categorie`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
