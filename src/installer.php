@@ -68,7 +68,7 @@ function dbToArray($xml)
                 $db['tables'][$tableName]['foreign'][] = [
                     'foreign-table' => (string) $fk->attributes()->{'foreign-table'},
                     'reference' => [
-                        'local-table' => (string) $fk->reference->attributes()['local-table'],
+                        'local-table' => (string) $tableName,
                         'local' => (string) $fk->reference->attributes()['local'],
                         'foreign' => (string) $fk->reference->attributes()['foreign']
                     ]
@@ -112,7 +112,7 @@ function arrayToSQL($database)
                         }
                         if(isset($attr['type']))
                         {
-                            $type = (string) $attr['type'];
+                            $type = (string) strtoupper($attr['type']);
                         }
                         if(isset($attr['size']))
                         {
@@ -157,7 +157,7 @@ function arrayToSQL($database)
                                     break;
                             }
                         }
-                        $sql .= ($primaryKey ? ' PRIMARY KEY' : '') . ($autoIncrement ? ' AUTO_INCREMENT' : '') . ($required ? ' NOT NULL' : '') . (!empty($default) ? 'DEFAULT `'.$default.'`' : '');
+                        $sql .= ($primaryKey ? ' PRIMARY KEY' : '') . ($autoIncrement ? ' AUTO_INCREMENT' : '') . ($required ? ' NOT NULL' : '') . (!empty($default) ? ' DEFAULT `'.$default.'`' : '');
                         
                         $i++;
                     }
@@ -215,12 +215,12 @@ function arrayToClass($database)
     mkdirR('orm');
     $base = fopen(__DIR__ . '/orm/Base.php', 'a+');
     file_put_contents(__DIR__ . '/orm/Base.php', '');
-    fwrite($base, file_get_contents(__DIR__ . '/test/Base.php'));
+    fwrite($base, file_get_contents(__DIR__ . '/class/Base.php'));
     fclose($base);
 
     $baseQuery = fopen(__DIR__ . '/orm/BaseQuery.php', 'a+');
     file_put_contents(__DIR__ . '/orm/BaseQuery.php', '');
-    fwrite($baseQuery, file_get_contents(__DIR__ . '/test/BaseQuery.php'));
+    fwrite($baseQuery, file_get_contents(__DIR__ . '/class/BaseQuery.php'));
     fclose($baseQuery);
     
     foreach($database['tables'] as $key => $table)
@@ -240,14 +240,20 @@ class $tableName extends Base
     ";
         $beginFileQuery = "<?php
 
-class $tableName\Query extends BaseQuery
+class ".$tableName."Query extends BaseQuery
 {
     public function __construct(\$table = '$key')
     {
         parent::__construct(\$table);
     }
+    
+    public static function create(string \$table = 'user')
+    {
+        return new UserQuery(\$table);
+    }
     ";
         fwrite($file, $beginFile);
+        fwrite($fileQuery, $beginFileQuery);
         
         foreach($table as $key => $column)
         {
@@ -257,11 +263,24 @@ class $tableName\Query extends BaseQuery
                 {
                     foreach($column as $key => $attr)
                     {
+                        $colName = formatName($key);
                         fwrite($file, "private \$$key = [
         'name' => '$key',
         'type' => '" . $attr['type'] . "',
         'required' => " . (isset($attr['required']) ? (string)$attr['required'] : 'false') . "
     ];
+    ");
+                        fwrite($fileQuery, "public function findBy$colName(string \$$key)
+    {
+        parent::findBy('$key', \$$key);
+    }
+
+    public function filterBy$colName(\$$key)
+    {
+        parent::filterBy('$key', \$$key, parent::EQUALS);
+        return \$this;
+    }
+    
     ");
                     }
                     
@@ -283,6 +302,7 @@ class $tableName\Query extends BaseQuery
     ");
                     }
                     fwrite($file, "\n}");
+                    fwrite($fileQuery, "\n}");
                 }
             }
         }

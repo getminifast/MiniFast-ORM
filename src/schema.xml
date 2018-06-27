@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<database name="main">
+<database name="test">
     <table name="user">
         <column name="id" type="int" primaryKey="true" autoIncrement="true"/>
-        <column name="pseudo" type="varchar" size="50"/>
-        <column name="email" type="varchar" size="139"/>
-        <column name="password" type="varchar" size="128"/>
+        <column name="pseudo" type="varchar" size="50" required="true"/>
+        <column name="email" type="varchar" size="139" required="true"/>
+        <column name="password" type="varchar" size="128" required="true"/>
         <column name="admin" type="boolean" default="0"/>
         <column name="image" type="text"/>
         <column name="newsletter" type="boolean" default="true"/>
@@ -12,11 +12,12 @@
     </table>
     <table name="categorie">
         <column name="id" type="int" primaryKey="true" autoIncrement="true"/>
-        <column name="name" type="varchar" size="20"/>
+        <column name="name" type="varchar" size="20" required="true"/>
     </table>
     <table name="topic">
         <column name="id" type="int" primaryKey="true" autoIncrement="true"/>
         <column name="categorie" type="int" required="true"/>
+        <column name="text" type="text" required="true"/>
         <foreign-key foreign-table="categorie">
             <reference local="categorie" foreign="id"/>
         </foreign-key>
