@@ -183,9 +183,110 @@ function arrayToSQL($database)
     return $sql;
 }
 
+function mkdirR($path)
+{
+    $path = explode('/', $path);
+
+    $current = '';
+    foreach($path as $dir)
+    {
+        $current .= (!empty($current) ? '/':'') . $dir;
+        if(!file_exists($current))
+        {
+            mkdir($current);
+        }
+    }
+}
+
+function formatName(string $name)
+{
+    $newName = explode('_', $name);
+    $names = [];
+    foreach($newName as $Name)
+    {
+        $names[] = ucfirst(strtolower($Name));
+    }
+    
+    return implode($names);
+}
+
 function arrayToClass($database)
 {
+    mkdirR('orm');
+    $base = fopen(__DIR__ . '/orm/Base.php', 'a+');
+    file_put_contents(__DIR__ . '/orm/Base.php', '');
+    fwrite($base, file_get_contents(__DIR__ . '/test/Base.php'));
+    fclose($base);
+
+    $baseQuery = fopen(__DIR__ . '/orm/BaseQuery.php', 'a+');
+    file_put_contents(__DIR__ . '/orm/BaseQuery.php', '');
+    fwrite($baseQuery, file_get_contents(__DIR__ . '/test/BaseQuery.php'));
+    fclose($baseQuery);
     
+    foreach($database['tables'] as $key => $table)
+    {
+        $tableName = formatName($key);
+        $path = 'orm/' . $tableName . '.php';
+        $pathQuery = 'orm/' . $tableName . 'Query.php';
+        $file = fopen($path, 'a+');
+        $fileQuery = fopen($pathQuery, 'a+');
+        file_put_contents($path, '');
+        file_put_contents($pathQuery, '');
+        $beginFile = "<?php
+
+class $tableName extends Base
+{
+    private \$table = '$key';
+    ";
+        $beginFileQuery = "<?php
+
+class $tableName\Query extends BaseQuery
+{
+    public function __construct(\$table = '$key')
+    {
+        parent::__construct(\$table);
+    }
+    ";
+        fwrite($file, $beginFile);
+        
+        foreach($table as $key => $column)
+        {
+            if(sizeof($column) > 1 or $key === 'foreign')
+            {
+                if($key !== 'foreign')
+                {
+                    foreach($column as $key => $attr)
+                    {
+                        fwrite($file, "private \$$key = [
+        'name' => '$key',
+        'type' => '" . $attr['type'] . "',
+        'required' => " . (isset($attr['required']) ? (string)$attr['required'] : 'false') . "
+    ];
+    ");
+                    }
+                    
+                    fwrite($file, "\n\t");
+                    fwrite($file, "public function __construct()
+    {
+        parent::__construct(\$this->table);
+    }
+    ");
+                    fwrite($file, "\n\t");
+                    
+                    foreach($column as $key => $attr)
+                    {
+                        $colName = formatName($key);
+                        fwrite($file, "public function set$colName(\$value)
+    {
+        parent::set('$key', \$value);
+    }
+    ");
+                    }
+                    fwrite($file, "\n}");
+                }
+            }
+        }
+    }
 }
 
 if(sizeof($argv) > 2)
@@ -196,13 +297,16 @@ if(sizeof($argv) > 2)
         if(file_exists($xmlPath))
         {
             $xml = file_get_contents($xmlPath);
-            $sql = arrayToSQL(dbToArray($xml));
+            $array = dbToArray($xml);
+            $sql = arrayToSQL($array);
             if(!empty($sql))
             {
                 $file = fopen('database.sql', 'a+');
                 file_put_contents('database.sql', '');
                 fwrite($file, $sql);
                 fclose($file);
+                
+                arrayToClass($array);
             }
         }
     }
