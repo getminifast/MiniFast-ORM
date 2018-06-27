@@ -68,6 +68,7 @@ function dbToArray($xml)
                 $db['tables'][$tableName]['foreign'][] = [
                     'foreign-table' => (string) $fk->attributes()->{'foreign-table'},
                     'reference' => [
+                        'local-table' => (string) $fk->reference->attributes()['local-table'],
                         'local' => (string) $fk->reference->attributes()['local'],
                         'foreign' => (string) $fk->reference->attributes()['foreign']
                     ]
@@ -134,7 +135,30 @@ function arrayToSQL($database)
                             $autoIncrement = (boolean) $attr['autoIncrement'];
                         }
 
-                        $sql .= ($i > 0 ? ",\n" : '') . "\t`" . $name . '` ' . $type . (!empty($size) ? '(' . $size . ')' : '') . ($primaryKey ? ' PRIMARY KEY' : '') . ($autoIncrement ? ' AUTO_INCREMENT' : '') . ($required ? ' NOT NULL' : '');
+                        $sql .= ($i > 0 ? ",\n" : '') . "\t";
+                        $sql .= '`' . $name . '` ' . $type;
+                        if(!empty($size))
+                        {
+                            $sql .= '(' . $size . ')';
+                        }
+                        else
+                        {
+                            switch(strtolower($type))
+                            {
+                                case 'int':
+                                    $sql .= '(11)';
+                                    break;
+                                    
+                                case 'varchar':
+                                    $sql .= '(40)';
+                                    
+                                default:
+                                    '';
+                                    break;
+                            }
+                        }
+                        $sql .= ($primaryKey ? ' PRIMARY KEY' : '') . ($autoIncrement ? ' AUTO_INCREMENT' : '') . ($required ? ' NOT NULL' : '') . (!empty($default) ? 'DEFAULT `'.$default.'`' : '');
+                        
                         $i++;
                     }
                     $sql .= "\n) ENGINE=InnoDB;\n\n";
@@ -144,7 +168,7 @@ function arrayToSQL($database)
                     $i = 0;
                     foreach($column as $key => $foreign)
                     {
-                        $sql .= ($i > 0 ? "\n" : '') . 'ALTER TABLE `' . $foreign['reference']['local'] . '` ADD CONSTRAINT `FK_' . ucfirst($foreign['foreign-table']) . ucfirst($foreign['reference']['foreign']) . '` FOREIGN KEY (`' . $foreign['reference']['local'] . '`) REFERENCES `' . $foreign['foreign-table'] . '`(`' . $foreign['reference']['foreign'] . '`) ON DELETE RESTRICT ON UPDATE RESTRICT;';
+                        $sql .= ($i > 0 ? "\n" : '') . 'ALTER TABLE `' . $foreign['reference']['local-table'] . '` ADD CONSTRAINT `FK_' . ucfirst($foreign['foreign-table']) . ucfirst($foreign['reference']['foreign']) . '` FOREIGN KEY (`' . $foreign['reference']['local'] . '`) REFERENCES `' . $foreign['foreign-table'] . '`(`' . $foreign['reference']['foreign'] . '`) ON DELETE RESTRICT ON UPDATE RESTRICT;';
                         $i++;
                     }
                 }
@@ -172,7 +196,14 @@ if(sizeof($argv) > 2)
         if(file_exists($xmlPath))
         {
             $xml = file_get_contents($xmlPath);
-            arrayToSQL(dbToArray($xml));
+            $sql = arrayToSQL(dbToArray($xml));
+            if(!empty($sql))
+            {
+                $file = fopen('database.sql', 'a+');
+                file_put_contents('database.sql', '');
+                fwrite($file, $sql);
+                fclose($file);
+            }
         }
     }
 }
