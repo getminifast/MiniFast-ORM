@@ -4,7 +4,7 @@ MiniFast ORM is a very little Object-Relational Mapping system. It will be usefu
 ### Task list - Installer
 - [X] Translate XML database into PHP array
 - [X] Translate PHP array into SQL script
-- [ ] Writing PHP classes from PHP array
+- [X] Writing PHP classes from PHP array
 
 ### Task list - ORM
 - [X] Base.php for inserting data into the database
