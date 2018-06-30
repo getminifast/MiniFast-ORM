@@ -1,5 +1,5 @@
 # MiniFast ORM
-MiniFast ORM is a very little Object-Relational Mapping system. It will be usefull for little web project where you don't want to spend all your time writting SQL queries.
+MiniFast ORM is a very little Object-Relational Mapping system. It will be usefull for little web projects where you don't want to spend all your time writting SQL queries.
 
 ### Task list - Installer
 - [X] Translate XML database into PHP array
@@ -29,15 +29,15 @@ Example:
         <column name="newsletter" type="boolean" default="true"/>
         <column name="email_public" type="boolean" default="true"/>
     </table>
-    <table name="categorie">
+    <table name="category">
         <column name="id" type="int" primaryKey="true" autoIncrement="true"/>
         <column name="name" type="varchar" size="20"/>
     </table>
     <table name="topic">
         <column name="id" type="int" primaryKey="true" autoIncrement="true"/>
-        <column name="categorie" type="int" required="true"/>
-        <foreign-key foreign-table="categorie">
-            <reference local="categorie" foreign="id"/>
+        <column name="category" type="int" required="true"/>
+        <foreign-key foreign-table="category">
+            <reference local="category" foreign="id"/>
         </foreign-key>
     </table>
 </database>
@@ -71,7 +71,7 @@ This will create the SQL query and execute it.
 #### SELECT
 ```php
 <?php
-// 10 of all users but begins after the third
+// Select 10 users starting after the third
 $user = new UserQuery::create()
     ->limit(10)
     ->offset(3)
