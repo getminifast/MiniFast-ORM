@@ -49,7 +49,6 @@ class BaseQuery
 
     public static function create(string $table)
     {
-        // TODO chercher fonction create
         return new BaseQuery($table);
     }
 
@@ -89,7 +88,7 @@ class BaseQuery
     {
         // TODO filterBy
         $this->filters[] = $col;
-        $this->filterValues[] = [$col => $value];
+        $this->filterValues[$col . 'Filter'] = $value;
 
         if(defined('self::'.$criteria))
         {
@@ -120,7 +119,7 @@ class BaseQuery
     {
         // TODO set
         $this->cols[] = $col;
-        $this->values[$col] = $value;
+        $this->values[$col . 'Update'] = $value;
         return $this;
     }
 
@@ -170,6 +169,32 @@ class BaseQuery
         }
     }
 
+    public function delete($all = false)
+    {
+        if(!empty($this->filters) and !empty($this->filterValues))
+        {
+            $query = 'DELETE FROM ' . $this->table . ' WHERE ';
+            $i = 0;
+            foreach($this->filters as $col)
+            {
+                $query .= ($i > 0 ? ' AND ':'') . $col . ' = :' . $col . 'Filter';
+            }
+
+            $req = $this->co->prepare($query);
+            $req->execute($this->filterValues);
+        }
+        else{
+            if($all)
+            {
+                $req = $this->co->query("DELETE FROM $this->table");
+            }
+            else
+            {
+                throw new Exception("If you want to delete all from $this->table, you need to specify optional argument delete(\$all = true)\n");
+            }
+        }
+    }
+
     public function save()
     {
         // TODO save
@@ -180,12 +205,22 @@ class BaseQuery
             $i = 0;
             foreach($this->cols as $col)
             {
-                $query .= ($i > 0 ? ', ':'') . $col . ' = :' . $col;
+                $query .= ($i > 0 ? ', ':'') . $col . ' = :' . $col . 'Update';
                 $i++;
             }
 
+            if(!empty($this->filters) and !empty($this->filterValues))
+            {
+                $query .= ' WHERE ';
+                $i = 0;
+                foreach($this->filters as $col)
+                {
+                    $query .= ($i > 0 ? ' AND ':'') . $col . ' = :' . $col . 'Filter';
+                }
+            }
+
             $req = $this->co->prepare($query);
-            $req->execute($this->values);
+            $req->execute(array_merge($this->values, $this->filterValues));
         }
         else
         {

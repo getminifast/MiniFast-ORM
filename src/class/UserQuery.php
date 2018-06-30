@@ -12,6 +12,11 @@ class UserQuery extends BaseQuery
         return new UserQuery($table);
     }
     
+    public function setPseudo($pseudo)
+    {
+        parent::set('pseudo', $pseudo);
+    }
+    
     public function findByPseudo(string $pseudo)
     {
         parent::findBy('pseudo', $pseudo);
