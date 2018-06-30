@@ -5,11 +5,11 @@ MiniFast ORM is a very little Object-Relational Mapping system. It will be usefu
 - [X] Translate XML database into PHP array
 - [X] Translate PHP array into SQL script
 - [X] Writing PHP classes from PHP array
-- [ ] Writting autoload.php file
+- [X] Writting autoload.php file
 
 ### Task list - ORM
 - [X] Base.php for inserting data into the database
-- [ ] BaseQuery.php for querying the database
+- [X] BaseQuery.php for querying the database
 
 ## Documentation
 
@@ -44,11 +44,73 @@ Example:
 ```
 
 ### Install
-Place the `installer.php` in your website root directory and then execute it:
+Place the `installer.php` and the `class` directory in your website root directory and then execute it:
 ```bash
 $ php installer.php init /path/to/schema.xml
 ```
+There will be no input if there is no error.
 
-Follow instructions and all should be good.
+### How to use
+Set up the MySQL host, user and password (defaults are `localhost`, `root` and `root`) in `/class/Base.php` and `/class/BaseQuery.php` `__construct()` methods.
 
-*To be continued...*
+An `autoload.php` file has been created and you need to include it in order to use MiniFast. Assuming you have the same `schema.xml` than the one above, you will find some examples below:
+
+#### INSERT
+```php
+<?php
+$user = new User();
+$user
+    ->setPseudo('iTechCydia')
+    ->setEmail('email@server.com')
+    ->setPassword(hash('whirlpool', 'theUserSecretPassword'))
+    ->setDate(time())
+    ->save();
+```
+This will create the SQL query and execute it.
+
+#### SELECT
+```php
+<?php
+// 10 of all users but begins after the third
+$user = new UserQuery::create()
+    ->limit(10)
+    ->offset(3)
+    ->find();
+
+// Only the user 23
+$user = new UserQuery::create()
+    ->findPK(23);
+
+// Users 23, 24 and 25
+$user = new UserQuery::create()
+    ->findPKs([23, 24, 25]);
+
+// User where pseudo is iTechCydia
+$user = new UserQuery::create()
+    ->findByPseudo('iTechCydia')
+    ->find();
+```
+
+#### UPDATE
+```php
+<?php
+$user = UserQuery::create()
+    ->filterById(23)
+    ->setNewsletter(true)
+    ->setEmailPublic(false)
+    ->setEmail('email2@server.com')
+    ->save();
+```
+
+#### DELETE
+```php
+<?php
+// Delete all from user table (you need to set the first parameter to true to avoid any mistake)
+$user = UserQuery::create()
+    ->delete(true);
+
+// Delete specific users using filters
+$user = UserQuery::create()
+    ->filterByNewsletter(false) // bad users :p
+    ->delete();
+```
