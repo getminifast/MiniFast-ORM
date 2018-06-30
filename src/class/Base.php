@@ -6,13 +6,13 @@ class Base
     private $values = [];
     private $table;
     private $co;
-    
+
     const INSERT = 'INSERT INTO';
     const VALUES = 'VALUES';
-    
+
     public function __construct(string $table)
     {
-        
+
         $pdo_options[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
 
         $host = 'localhost';
@@ -28,7 +28,7 @@ class Base
         {
             die('Erreur : ' . $e->getMessage());
         }
-        
+
         if(!empty($table))
         {
             $this->table = $table;
@@ -38,7 +38,7 @@ class Base
             throw new Exception('Vous devez renseigner la table utilisée');
         }
     }
-    
+
     /*
      * Attribut une nouvelle valeur à une colonne
      * @param string $col
@@ -49,7 +49,7 @@ class Base
         $this->cols[] = $col;
         $this->values[] = [$col => $value];
     }
-    
+
     /*
      * Insert les données dans la base de données
      */
@@ -60,9 +60,8 @@ class Base
         if(!empty($this->table) and !empty($this->cols) and !empty($this->values))
         {
             $query = self::INSERT . ' ' . $this->table . '(' . implode(', ', $this->cols) . ') ' . self::VALUES . '(:' . implode(', :', $this->cols) . ')';
-//            $req = $this->co->prepare($query);
-//            $req->execute($this->values);
-            echo $query;
+            $req = $this->co->prepare($query);
+            $req->execute($this->values);
         }
         // Sinon erreur
         else
