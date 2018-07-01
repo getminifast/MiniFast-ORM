@@ -1,0 +1,7 @@
+{
+    "name": "itechcydia/minifast-orm",
+    "description": "A little ORM, very simple to use and ultra fast",
+    "require": {
+        "php": "^7.0"
+    }
+}
