@@ -196,7 +196,6 @@ function arrayToSQL($database)
 
 function mkdirR($path)
 {
-    $path = explode('/', $path);
 
     $current = '';
     foreach($path as $dir)
@@ -223,36 +222,37 @@ function formatName(string $name)
 
 function arrayToClass($database)
 {
+    $basepath = dirname(__FILE__);
     $dbName = $database['database'];
-    $autoload = fopen(__DIR__ . '/autoload.php', 'a+');
-    file_put_contents(__DIR__ . '/autoload.php', '');
+    $autoload = fopen($basepath . '/autoload.php', 'a+');
+    file_put_contents($basepath . '/autoload.php', '');
     fwrite($autoload, "<?php\n");
 
-    mkdirR('minifast');
-    $base = fopen(__DIR__ . '/minifast/Base.php', 'a+');
-    file_put_contents(__DIR__ . '/minifast/Base.php', '');
-    fwrite($base, str_replace('db_name', $dbName, file_get_contents(__DIR__ . '/class/Base.php')));
+    mkdir($basepath . '/minifast');
+    $base = fopen($basepath . '/minifast/Base.php', 'a+');
+    file_put_contents($basepath . '/minifast/Base.php', '');
+    fwrite($base, str_replace('db_name', $dbName, file_get_contents($basepath . '/class/Base.php')));
     fclose($base);
-    fwrite($autoload, "include_once __DIR__ . '/minifast/Base.php';\n");
+    fwrite($autoload, "include_once dirname(__FILE__).'/minifast/Base.php';\n");
 
-    $baseQuery = fopen(__DIR__ . '/minifast/BaseQuery.php', 'a+');
-    file_put_contents(__DIR__ . '/minifast/BaseQuery.php', '');
-    fwrite($baseQuery, str_replace('db_name', $dbName, file_get_contents(__DIR__ . '/class/BaseQuery.php')));
+    $baseQuery = fopen($basepath . '/minifast/BaseQuery.php', 'a+');
+    file_put_contents($basepath . '/minifast/BaseQuery.php', '');
+    fwrite($baseQuery, str_replace('db_name', $dbName, file_get_contents($basepath . '/class/BaseQuery.php')));
     fclose($baseQuery);
-    fwrite($autoload, "include_once __DIR__ . '/minifast/BaseQuery.php';\n");
+    fwrite($autoload, "include_once dirname(__FILE__).'/minifast/BaseQuery.php';\n");
 
     foreach($database['tables'] as $key => $table)
     {
         $tableName = formatName($key);
-        $path = 'minifast/' . $tableName . '.php';
-        $pathQuery = 'minifast/' . $tableName . 'Query.php';
+        $path = $basepath . '/minifast/' . $tableName . '.php';
+        $pathQuery = $basepath . '/minifast/' . $tableName . 'Query.php';
         $file = fopen($path, 'a+');
         $fileQuery = fopen($pathQuery, 'a+');
         file_put_contents($path, '');
         file_put_contents($pathQuery, '');
 
-        fwrite($autoload, "include_once __DIR__ . '/minifast/$tableName.php';\n");
-        fwrite($autoload, "include_once __DIR__ . '/minifast/$tableName" . "Query.php';\n");
+        fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName.php';\n");
+        fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName" . "Query.php';\n");
 
         $beginFile = "<?php
 

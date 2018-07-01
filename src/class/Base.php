@@ -47,7 +47,7 @@ class Base
     public function set(string $col, $value)
     {
         $this->cols[] = $col;
-        $this->values[] = [$col => $value];
+        $this->values[$col] = $value;
     }
 
     /*
