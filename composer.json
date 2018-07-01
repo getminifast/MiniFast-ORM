@@ -1,6 +1,14 @@
 {
     "name": "itechcydia/minifast-orm",
     "description": "A little ORM, very simple to use and ultra fast",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Vincent Bathelier",
+            "email": "vincent.bathelier98@gmail.com",
+            "homepage": "http://minifast.itechcydia.fr",
+            "role": "Developer"
+        }
     "require": {
         "php": "^7.0"
     }
