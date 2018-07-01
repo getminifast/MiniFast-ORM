@@ -9,6 +9,7 @@
             "homepage": "http://minifast.itechcydia.fr",
             "role": "Developer"
         }
+    ],
     "require": {
         "php": "^7.0"
     }
