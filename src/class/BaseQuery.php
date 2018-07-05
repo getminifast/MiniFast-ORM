@@ -24,7 +24,7 @@ class BaseQuery
         $pdo_options[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
 
         $host = 'localhost';
-        $dbname = 'db_name';
+        $dbname = '__DB_NAME__';
         $user = 'root';
         $password = 'root';
 

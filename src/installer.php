@@ -73,6 +73,7 @@ function dbToArray($xml)
                         'foreign' => (string) $fk->reference->attributes()['foreign']
                     ]
                 ];
+                $db['tables'][$tableName]['columns'][(string)$fk->reference->attributes()['local']]['foreign'] = true;
             }
         }
         else
@@ -228,16 +229,16 @@ function arrayToClass($database)
     file_put_contents($basepath . '/autoload.php', '');
     fwrite($autoload, "<?php\n");
 
-    mkdir($basepath . '/minifast');
+    @mkdir($basepath . '/minifast');
     $base = fopen($basepath . '/minifast/Base.php', 'a+');
     file_put_contents($basepath . '/minifast/Base.php', '');
-    fwrite($base, str_replace('db_name', $dbName, file_get_contents($basepath . '/class/Base.php')));
+    fwrite($base, str_replace('__DB_NAME__', $dbName, file_get_contents($basepath . '/class/Base.php')));
     fclose($base);
     fwrite($autoload, "include_once dirname(__FILE__).'/minifast/Base.php';\n");
 
     $baseQuery = fopen($basepath . '/minifast/BaseQuery.php', 'a+');
     file_put_contents($basepath . '/minifast/BaseQuery.php', '');
-    fwrite($baseQuery, str_replace('db_name', $dbName, file_get_contents($basepath . '/class/BaseQuery.php')));
+    fwrite($baseQuery, str_replace('__DB_NAME__', $dbName, file_get_contents($basepath . '/class/BaseQuery.php')));
     fclose($baseQuery);
     fwrite($autoload, "include_once dirname(__FILE__).'/minifast/BaseQuery.php';\n");
 
@@ -253,29 +254,22 @@ function arrayToClass($database)
 
         fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName.php';\n");
         fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName" . "Query.php';\n");
-
-        $beginFile = "<?php
-
-class $tableName extends Base
-{
-    private \$table = '$key';
-    ";
-        $beginFileQuery = "<?php
-
-class ".$tableName."Query extends BaseQuery
-{
-    public function __construct(\$table = '$key')
-    {
-        parent::__construct(\$table);
-    }
-
-    public static function create(string \$table = 'user')
-    {
-        return new UserQuery(\$table);
-    }
-    ";
+        
+        // Writting start of files
+        $beginFile = file_get_contents($basepath . '/class/Child-Start.php');
+        $beginFileQuery = file_get_contents($basepath . '/class/ChildQuery-Start.php');
+        $beginFile = str_replace('__TABLE_FORMATED_NAME__', $tableName, $beginFile);
+        $beginFileQuery = str_replace('__TABLE_FORMATED_NAME__', $tableName, $beginFileQuery);
         fwrite($file, $beginFile);
         fwrite($fileQuery, $beginFileQuery);
+        
+        // Writting constructors
+        $constructFile = file_get_contents($basepath . '/class/Child-Construct.php');
+        $constructFileQuery = file_get_contents($basepath . '/class/ChildQuery-Construct.php');
+        $constructFile = str_replace('__TABLE_NAME__', $key, $constructFile);
+        $constructFileQuery = str_replace('__TABLE_NAME__', $key, $constructFileQuery);
+        fwrite($file, $constructFile);
+        fwrite($fileQuery, $constructFileQuery);
 
         foreach($table as $key => $column)
         {
@@ -283,55 +277,41 @@ class ".$tableName."Query extends BaseQuery
             {
                 if($key !== 'foreign')
                 {
+                    $i = 0;
+                    $nbColumns = sizeof($column);
+                    fwrite($file, "\tprivate \$vars = [\n");
                     foreach($column as $key => $attr)
                     {
                         $colName = formatName($key);
-                        fwrite($file, "private \$$key = [
-        'name' => '$key',
-        'type' => '" . $attr['type'] . "',
-        'required' => " . (isset($attr['required']) ? (string)$attr['required'] : 'false') . "
-    ];
-    ");
-                        fwrite($fileQuery, "public function set$colName(\$value)
-    {
-        parent::set('$key', \$value);
-        return \$this;
-    }
-
-    public function findBy$colName(string \$$key)
-    {
-        parent::findBy('$key', \$$key);
-        return \$this;
-    }
-
-    public function filterBy$colName(\$$key)
-    {
-        parent::filterBy('$key', \$$key, parent::EQUALS);
-        return \$this;
-    }
-
-    ");
+                        
+                        // File
+                        $varsFile = file_get_contents($basepath . '/class/Child-Vars.php');
+                        $varsFile = str_replace('__COLUMN_NAME__', $key, $varsFile);
+                        $varsFile = str_replace('__IS_FOREIGN__', (isset($attr['foreign']) ? 'true':'false'), $varsFile);
+                        $varsFile = str_replace('__COLUMN_TYPE__', $attr['type'], $varsFile);
+                        $varsFile = str_replace('__IS_REQUIRED__', (isset($attr['required']) ? ($attr['required'] ? 'true' : 'false') : 'false'), $varsFile);
+                        
+                        fwrite($file, $varsFile . (($i < $nbColumns - 1) ? ',':'') . "\n");
+                        
+                        // FileQuery
+                        $methodsQuery = file_get_contents($basepath . '/class/ChildQuery-Methods.php');
+                        $methodsQuery = str_replace('__COLUMN_FORMATED_NAME__', $colName, $methodsQuery);
+                        $methodsQuery = str_replace('__COLUMN_NAME__', $key, $methodsQuery);
+                        fwrite($fileQuery, $methodsQuery . "\n");
+                        $i++;
                     }
-
-                    fwrite($file, "\n\t");
-                    fwrite($file, "public function __construct()
-    {
-        parent::__construct(\$this->table);
-    }
-    ");
-                    fwrite($file, "\n\t");
-
+                    fwrite($file, "\t];\n");
+                    
                     foreach($column as $key => $attr)
                     {
                         $colName = formatName($key);
-                        fwrite($file, "public function set$colName(\$value)
-    {
-        parent::set('$key', \$value);
-    }
-    ");
+                        $methodsFile = file_get_contents($basepath . '/class/Child-Methods.php');
+                        $methodsFile = str_replace('__COLUMN_FORMATED_NAME__', $colName, $methodsFile);
+                        $methodsFile = str_replace('__COLUMN_NAME__', $key, $methodsFile);
+                        fwrite($file, $methodsFile . "\n");
                     }
-                    fwrite($file, "\n}");
-                    fwrite($fileQuery, "\n}");
+                    fwrite($file, "}\n");
+                    fwrite($fileQuery, "}\n");
                 }
             }
         }
