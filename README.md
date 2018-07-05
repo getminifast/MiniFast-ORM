@@ -44,13 +44,22 @@ Example:
 ```
 
 ### Install
-Place the `installer.php` and the `class` directory in your website root directory and then execute it:
+Install MiniFast with [Composer](https://getcomposer.org/) by adding it to the `composer.json` file:
+```json
+{
+    "require": {
+        "itechcydia/minifast-orm": "@dev"
+    }
+}
+```
+There is an installer included in MiniFast that will create classes for you based on your xml schema. Assuming you are in your website root directory, execute it like this:
 ```bash
-$ php installer.php init /path/to/schema.xml
+$ php vendor/itechcydia/minifast-orm/installer.php init /path/to/schema.xml
 ```
 There will be no input if there is no error.
 
 ### How to use
+After running the installer, an autoloader has been created.
 Set up the MySQL host, user and password (defaults are `localhost`, `root` and `root`) in `/class/Base.php` and `/class/BaseQuery.php` `__construct()` methods.
 
 An `autoload.php` file has been created and you need to include it in order to use MiniFast. Assuming you have the same `schema.xml` than the one above, you will find some examples below:

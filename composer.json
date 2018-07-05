@@ -14,8 +14,8 @@
         "php": "^7.0"
     },
     "autoload": {
-        "psr-4": {
-            "iTechCydia\\MiniFast\\": "src/"
+        "psr-0": {
+            "minifast-orm": "src/"
         }
     }
 }
