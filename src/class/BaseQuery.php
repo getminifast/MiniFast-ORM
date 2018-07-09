@@ -63,7 +63,7 @@ class BaseQuery
             $i = 0;
             foreach($this->filters as $filter)
             {
-                $query .= ($i > 0 ? ' AND ':' WHERE ') . $filter . ' ' . (!empty($criteria) ? $criteria : '=') . ' :' . $filter;
+                $query .= ($i > 0 ? ' AND ':' WHERE ') . $filter . ' ' . (!empty($criteria) ? $criteria : '=') . ' :' . $filter . 'Filter';
                 $i++;
             }
         }
