@@ -11,6 +11,7 @@ class BaseQuery
     private $limit;
     private $offset;
     private $criteria;
+    private $count;
 
     const MIN = '>=';
     const STRICT_MIN = '>';
@@ -51,11 +52,18 @@ class BaseQuery
     {
         return new BaseQuery($table);
     }
-
-    public function find()
+    
+    private function createFind()
     {
-        // TODO fonction find
-        $query = 'SELECT ' . $this->table . '.* FROM ' . $this->table;
+        $query = 'SELECT ' . $this->table . '.* ';
+        
+        // count
+        if(!empty($this->count))
+        {
+            $query .= ' , COUNT(' . $this->count['col'] . ') AS ' . $this->count['name'] . ' '
+        }
+        
+        $query .= 'FROM ' . $this->table;
 
         // where
         if(!empty($this->filters) and !empty($this->filterValues))
@@ -76,7 +84,18 @@ class BaseQuery
 
         $req = $this->co->prepare($query);
         $req->execute($this->filterValues);
-        return $req->fetchAll();
+        
+        return $req;
+    }
+
+    public function find()
+    {
+        return self::createFind()->fetch();
+    }
+    
+    public function findAll()
+    {
+        return self::createFind()->fetchAll();
     }
 
     public function findOneBy()
@@ -86,13 +105,16 @@ class BaseQuery
 
     public function filterBy(string $col, $value, $criteria = self::EQUALS)
     {
-        // TODO filterBy
         $this->filters[] = $col;
         $this->filterValues[$col . 'Filter'] = $value;
 
         if(defined('self::'.$criteria))
         {
             $this->criteria = $criteria;
+        }
+        else
+        {
+            throw new Exception("Unknow criteria `$criteria`.");
         }
 
         return $this;
@@ -110,14 +132,17 @@ class BaseQuery
         return $this;
     }
 
-    public function count()
+    public function count(string $col, string $name)
     {
         // TODO count
+        $this->count = [
+            'col' => $col,
+            'name' => $name
+        ]
     }
 
     public function set(string $col, $value)
     {
-        // TODO set
         $this->cols[] = $col;
         $this->values[$col . 'Update'] = $value;
         return $this;

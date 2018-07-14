@@ -15,3 +15,9 @@
         parent::filterBy('__COLUMN_NAME__', $__COLUMN_NAME__, parent::EQUALS);
         return $this;
     }
+
+    public function count__COLUMN_FORMATED_NAME__($name)
+    {
+        parent::count('__COLUMN_NAME__', $name);
+        return $this;
+    }
