@@ -48,7 +48,7 @@ Install MiniFast with [Composer](https://getcomposer.org/) by adding it to the `
 ```json
 {
     "require": {
-        "itechcydia/minifast-orm": "@dev"
+        "itechcydia/minifast-orm": "^1"
     }
 }
 ```
