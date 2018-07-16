@@ -69,4 +69,9 @@ class Base
             throw new Exception('You cannot save before inserting data.');
         }
     }
+    
+    public static function now()
+    {
+        return date('DD-MM-AAAA hh:mm:ss');
+    }
 }

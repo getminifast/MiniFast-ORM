@@ -310,6 +310,11 @@ class BaseQuery
             throw new Exception('Nothing to update');
         }
     }
+    
+    public static function now()
+    {
+        return date('DD-MM-AAAA hh:mm:ss');
+    }
 
     private function formatName(string $name)
     {
