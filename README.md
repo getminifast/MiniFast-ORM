@@ -68,29 +68,41 @@ $user
 This will create the SQL query and execute it.
 
 #### SELECT
+
+Select 10 users starting after the third.
 ```php
 <?php
-// Select 10 users starting after the third
 $user = new UserQuery::create()
     ->limit(10)
     ->offset(3)
-    ->find();
+    ->findAll();
+```
 
-// Only the user 23
+Only the user 23.
+```php
+<?php
 $user = new UserQuery::create()
     ->findPK(23);
+```
 
-// Users 23, 24 and 25
+Users 23, 24 and 25.
+```php
+<?php
 $user = new UserQuery::create()
     ->findPKs([23, 24, 25]);
+```
 
-// User where pseudo is iTechCydia
+User where pseudo is iTechCydia.
+```php
+<?php
 $user = new UserQuery::create()
     ->findByPseudo('iTechCydia')
     ->find();
 ```
 
 #### UPDATE
+
+Update user 23 and set `newsletter` to `true`, `email_public` to `false` and `email` to `email2@server.com`.
 ```php
 <?php
 $user = UserQuery::create()
@@ -98,17 +110,20 @@ $user = UserQuery::create()
     ->setNewsletter(true)
     ->setEmailPublic(false)
     ->setEmail('email2@server.com')
-    ->save();
+    ->save(); // Don't forget to save!
 ```
 
 #### DELETE
+
+Delete all from user table (you need to set the first parameter to true to avoid any mistake)
 ```php
 <?php
-// Delete all from user table (you need to set the first parameter to true to avoid any mistake)
 $user = UserQuery::create()
     ->delete(true);
+```
 
-// Delete specific users using filters
+Delete specific users using filters
+```php
 $user = UserQuery::create()
     ->filterByNewsletter(false) // bad users :p
     ->delete();
