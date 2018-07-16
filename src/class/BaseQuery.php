@@ -4,6 +4,7 @@ class BaseQuery
 {
     private $co;
     private $table;
+    private $base;
     private $cols = [];
     private $values = [];
     private $filters = [];
@@ -11,6 +12,7 @@ class BaseQuery
     private $limit;
     private $offset;
     private $criteria;
+    private $criterias = ['>=', '>', '<=', '<', '=', '<>'];
     private $count;
 
     const MIN = '>=';
@@ -44,7 +46,7 @@ class BaseQuery
         }
         else
         {
-            throw new Exception('Vous devez renseigner la table utilisée');
+            throw new Exception('You need to specify the table');
         }
     }
 
@@ -52,18 +54,24 @@ class BaseQuery
     {
         return new BaseQuery($table);
     }
-    
-    private function createFind()
+
+    public function setBase(string $base)
     {
-        $query = 'SELECT ' . $this->table . '.* ';
-        
+        $this->base = $base;
+    }
+
+    private function createFind(string $table = '')
+    {
+        $table = !empty($table) ? $table : $this->table;
+        $query = 'SELECT ' . $table . '.* ';
+
         // count
         if(!empty($this->count))
         {
-            $query .= ' , COUNT(' . $this->count['col'] . ') AS ' . $this->count['name'] . ' '
+            $query .= ' , COUNT(' . $this->count['col'] . ') AS ' . $this->count['name'] . ' ';
         }
-        
-        $query .= 'FROM ' . $this->table;
+
+        $query .= 'FROM ' . $table;
 
         // where
         if(!empty($this->filters) and !empty($this->filterValues))
@@ -71,7 +79,7 @@ class BaseQuery
             $i = 0;
             foreach($this->filters as $filter)
             {
-                $query .= ($i > 0 ? ' AND ':' WHERE ') . $filter . ' ' . (!empty($criteria) ? $criteria : '=') . ' :' . $filter . 'Filter';
+                $query .= ($i > 0 ? ' AND ':' WHERE ') . $filter . ' ' . (!empty($this->criteria) ? $this->criteria : '=') . ' :' . $filter . 'Filter';
                 $i++;
             }
         }
@@ -84,18 +92,69 @@ class BaseQuery
 
         $req = $this->co->prepare($query);
         $req->execute($this->filterValues);
-        
+
         return $req;
     }
 
-    public function find()
+    private function fetchForeign(string $col, $value, string $table)
     {
-        return self::createFind()->fetch();
+        $base = $table . 'Query';
+        $base = $base::create();
+        $filter = 'FilterBy' . self::formatName($col);
+        $base->$filter($value);
+        $columns = $base->find(); // TODO return foreing values
+
+        return $columns;
     }
-    
-    public function findAll()
+
+    public function find(string $table = '', string $class = '')
     {
-        return self::createFind()->fetchAll();
+        $table = !empty($table) ? $table : $this->table;
+        $class = !empty($class) ? $class : $this->base;
+        $fetch = self::createFind($table)->fetch(PDO::FETCH_NAMED); // We need foreign values
+        $base = new $class();
+        $columns = $base->getColumns();
+
+        foreach($columns as $key => $col)
+        {
+            if($col['foreign'])
+            {
+                $fetch[$key] = self::fetchForeign($col['foreign']['col'], $fetch[$key], $col['foreign']['table']);
+            }
+        }
+
+        return $fetch;
+    }
+
+    public function findAll(string $table = '', string $class = '')
+    {
+        $table = !empty($table) ? $table : $this->table;
+        $class = !empty($class) ? $class : $this->base;
+        $fetchAll = self::createFind($table)->fetchAll(PDO::FETCH_NAMED);
+        $base = new $class();
+        $columns = $base->getColumns();
+        $fks = [];
+
+        foreach($columns as $key => $col)
+        {
+            if($col['foreign'])
+            {
+                $fks[$key] = $col['foreign'];
+            }
+        }
+
+        if(sizeof($fks) > 0)
+        {
+            foreach($fetchAll as $key => $entry)
+            {
+                foreach($fks as $k2 => $fk)
+                {
+                    $fetchAll[$key][$k2] = self::fetchForeign($fk['col'], $fetchAll[$key][$k2], $fk['table']);
+                }
+            }
+        }
+
+        return $fetchAll;
     }
 
     public function findOneBy()
@@ -108,7 +167,7 @@ class BaseQuery
         $this->filters[] = $col;
         $this->filterValues[$col . 'Filter'] = $value;
 
-        if(defined('self::'.$criteria))
+        if(in_array($criteria, $this->criterias))
         {
             $this->criteria = $criteria;
         }
@@ -134,11 +193,10 @@ class BaseQuery
 
     public function count(string $col, string $name)
     {
-        // TODO count
         $this->count = [
             'col' => $col,
             'name' => $name
-        ]
+        ];
     }
 
     public function set(string $col, $value)
@@ -153,12 +211,12 @@ class BaseQuery
         if(!empty($this->table))
         {
             $query = 'SELECT ' . $this->table . '.* FROM ' . $this->table . ' WHERE ' . $this->table . '.id = :id';
-            //            $req = $this->co->prepare($query);
-            //            $req->execute([
-            //                'id' => $id
-            //            ]);
-
-            //            return $req->fetch();
+            //                        $req = $this->co->prepare($query);
+            //                        $req->execute([
+            //                            'id' => $id
+            //                        ]);
+            //
+            //                        return $req->fetch();
             return $query;
         }
         else
@@ -251,5 +309,17 @@ class BaseQuery
         {
             throw new Exception('Nothing to update');
         }
+    }
+
+    private function formatName(string $name)
+    {
+        $newName = explode('_', $name);
+        $names = [];
+        foreach($newName as $Name)
+        {
+            $names[] = ucfirst(strtolower($Name));
+        }
+
+        return implode($names);
     }
 }

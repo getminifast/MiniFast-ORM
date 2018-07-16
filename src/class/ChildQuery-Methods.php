@@ -10,9 +10,9 @@
         return $this;
     }
 
-    public function filterBy__COLUMN_FORMATED_NAME__($__COLUMN_NAME__)
+    public function filterBy__COLUMN_FORMATED_NAME__($__COLUMN_NAME__, $criteria = parent::EQUALS)
     {
-        parent::filterBy('__COLUMN_NAME__', $__COLUMN_NAME__, parent::EQUALS);
+        parent::filterBy('__COLUMN_NAME__', $__COLUMN_NAME__, $criteria);
         return $this;
     }
 

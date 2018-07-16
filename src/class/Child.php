@@ -3,11 +3,14 @@
 class User extends Base
 {
     private $table = 'user';
-    private $pseudo = [
-        'name' => 'pseudo',
-        'type' => 'varchar',
-        'required' => true
+    private $vars = [
+        'pseudo' => [
+            'name' => 'pseudo',
+            'type' => 'varchar',
+            'required' => true
+        ]
     ];
+    
     private $email = 'email';
 
     public function __construct()
@@ -25,5 +28,10 @@ class User extends Base
     {
         parent::set('email', $value);
         return $this;
+    }
+    
+    public function getColumns()
+    {
+        return $this->vars;
     }
 }

@@ -40,7 +40,7 @@ class Base
     }
 
     /*
-     * Attribut une nouvelle valeur à une colonne
+     * Set a value to its column
      * @param string $col
      * @param string $value
      */
@@ -51,19 +51,19 @@ class Base
     }
 
     /*
-     * Insert les données dans la base de données
+     * Insert data into the database
      */
     public function save()
     {
 
-        // Si les données ont bien été renseignées
+        // If data has been set
         if(!empty($this->table) and !empty($this->cols) and !empty($this->values))
         {
             $query = self::INSERT . ' ' . $this->table . '(' . implode(', ', $this->cols) . ') ' . self::VALUES . '(:' . implode(', :', $this->cols) . ')';
             $req = $this->co->prepare($query);
             $req->execute($this->values);
         }
-        // Sinon erreur
+        // Else, error
         else
         {
             throw new Exception('You cannot save before inserting data.');

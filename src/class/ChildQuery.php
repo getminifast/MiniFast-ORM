@@ -2,6 +2,8 @@
 
 class UserQuery extends BaseQuery
 {
+    private $base = '__TABLE_FORMATED_NAME__';
+    
     public function __construct($table)
     {
         parent::__construct($table);
@@ -32,5 +34,13 @@ class UserQuery extends BaseQuery
     {
         parent::filterBy('email', $email, parent::EQUALS);
         return $this;
+    }
+    
+    public function getColumns()
+    {
+        $class = $this->base;
+        $base = new $class();
+        
+        return $base->getColumns();
     }
 }

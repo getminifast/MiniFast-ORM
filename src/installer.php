@@ -43,19 +43,19 @@ function dbToArray($xml)
                                 case 'size':
                                     $attr = intval($attr);
                                     break;
-                                    
+
                                 case 'primaryKey':
                                     $attr = (($attr == 'true' or $attr == true or $attr = "1") ? true : false);
                                     break;
-                                    
+
                                 case 'autoIncrement':
                                     $attr = (($attr == 'true' or $attr == true or $attr = "1") ? true : false);
                                     break;
-                                    
+
                                 default:
                                     break;
                             }
-                            
+
                             $db['tables'][$tableName]['columns'][$columnName][$key] = (string)$attr;
                         }
                         else
@@ -69,7 +69,7 @@ function dbToArray($xml)
                     die('A column of ' . $tableName . ' table hasn\'t enough attributes.' . "\n");
                 }
             }
-            
+
             foreach($table->{'foreign-key'} as $key => $fk)
             {
                 $db['tables'][$tableName]['foreign'][] = [
@@ -80,7 +80,10 @@ function dbToArray($xml)
                         'foreign' => (string) $fk->reference->attributes()['foreign']
                     ]
                 ];
-                $db['tables'][$tableName]['columns'][(string)$fk->reference->attributes()['local']]['foreign'] = true;
+                $db['tables'][$tableName]['columns'][(string)$fk->reference->attributes()['local']]['foreign'] = [
+                    'table' => (string) $fk->attributes()->{'foreign-table'},
+                    'col' => (string) $fk->reference->attributes()['foreign']
+                ];
             }
         }
         else
@@ -107,9 +110,9 @@ function arrayToSQL($database)
                 if($key !== 'foreign')
                 {
                     $sql .= "CREATE TABLE IF NOT EXISTS `$tableName` (\n";
-                    
+
                     $name = $type = $size = $default = $required = $primaryKey = $autoIncrement = '';
-                    
+
                     $i = 0;
                     foreach($column as $key => $attr)
                     {
@@ -153,7 +156,7 @@ function arrayToSQL($database)
                         {
                             $autoIncrement = (boolean) $attr['autoIncrement'];
                         }
-                        
+
                         $sql .= ($i > 0 ? ",\n" : '') . "\t";
                         $sql .= '`' . $name . '` ' . $type;
                         if(!empty($size))
@@ -167,17 +170,17 @@ function arrayToSQL($database)
                                 case 'int':
                                     $sql .= '(11)';
                                     break;
-                                    
+
                                 case 'varchar':
                                     $sql .= '(40)';
-                                    
+
                                 default:
                                     '';
                                     break;
                             }
                         }
                         $sql .= ($primaryKey ? ' PRIMARY KEY' : '') . ($autoIncrement ? ' AUTO_INCREMENT' : '') . ($required ? ' NOT NULL' : '') . (strlen($default) != 0 ? ' DEFAULT '.$default : '');
-                        
+
                         $i++;
                     }
                     $sql .= "\n) ENGINE=InnoDB;\n\n";
@@ -224,7 +227,7 @@ function formatName(string $name)
     {
         $names[] = ucfirst(strtolower($Name));
     }
-    
+
     return implode($names);
 }
 
@@ -235,20 +238,19 @@ function arrayToClass($database)
     $autoload = fopen($basepath . '/autoload.php', 'a+');
     file_put_contents($basepath . '/autoload.php', '');
     fwrite($autoload, "<?php\n");
-    
+
     @mkdir($basepath . '/minifast');
     $base = fopen($basepath . '/minifast/Base.php', 'a+');
     file_put_contents($basepath . '/minifast/Base.php', '');
     fwrite($base, str_replace('__DB_NAME__', $dbName, file_get_contents($basepath . '/class/Base.php')));
     fclose($base);
     fwrite($autoload, "include_once dirname(__FILE__).'/minifast/Base.php';\n");
-    
+
     $baseQuery = fopen($basepath . '/minifast/BaseQuery.php', 'a+');
     file_put_contents($basepath . '/minifast/BaseQuery.php', '');
     fwrite($baseQuery, str_replace('__DB_NAME__', $dbName, file_get_contents($basepath . '/class/BaseQuery.php')));
-    fclose($baseQuery);
     fwrite($autoload, "include_once dirname(__FILE__).'/minifast/BaseQuery.php';\n");
-    
+
     foreach($database['tables'] as $key => $table)
     {
         $tableName = formatName($key);
@@ -261,7 +263,7 @@ function arrayToClass($database)
 
         fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName.php';\n");
         fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName" . "Query.php';\n");
-        
+
         // Writting start of files
         $beginFile = file_get_contents($basepath . '/class/Child-Start.php');
         $beginFileQuery = file_get_contents($basepath . '/class/ChildQuery-Start.php');
@@ -269,12 +271,14 @@ function arrayToClass($database)
         $beginFileQuery = str_replace('__TABLE_FORMATED_NAME__', $tableName, $beginFileQuery);
         fwrite($file, $beginFile);
         fwrite($fileQuery, $beginFileQuery);
-        
+
         // Writting constructors
         $constructFile = file_get_contents($basepath . '/class/Child-Construct.php');
         $constructFileQuery = file_get_contents($basepath . '/class/ChildQuery-Construct.php');
         $constructFile = str_replace('__TABLE_NAME__', $key, $constructFile);
+        $constructFile = str_replace('__TABLE_FORMATED_NAME__', $tableName, $constructFile);
         $constructFileQuery = str_replace('__TABLE_NAME__', $key, $constructFileQuery);
+        $constructFileQuery = str_replace('__TABLE_FORMATED_NAME__', $tableName, $constructFileQuery);
         fwrite($file, $constructFile);
         fwrite($fileQuery, $constructFileQuery);
 
@@ -294,12 +298,21 @@ function arrayToClass($database)
                         // File
                         $varsFile = file_get_contents($basepath . '/class/Child-Vars.php');
                         $varsFile = str_replace('__COLUMN_NAME__', $key, $varsFile);
-                        $varsFile = str_replace('__IS_FOREIGN__', (isset($attr['foreign']) ? 'true':'false'), $varsFile);
+                        if(isset($attr['foreign']))
+                        {
+                            $str = "['table' => '" . formatName($attr['foreign']['table']) . "', 'col' => '" . $attr['foreign']['col'] . "']";
+                            $varsFile = str_replace('__IS_FOREIGN__', $str, $varsFile);
+                        }
+                        else
+                        {
+                            $varsFile = str_replace('__IS_FOREIGN__', 'false', $varsFile);
+                        }
                         $varsFile = str_replace('__COLUMN_TYPE__', $attr['type'], $varsFile);
                         $varsFile = str_replace('__IS_REQUIRED__', (isset($attr['required']) ? ($attr['required'] ? 'true' : 'false') : 'false'), $varsFile);
-                        
+                        $varsFile = str_replace('__IS_PRIMARY__', (isset($attr['primaryKey']) ? ($attr['primaryKey'] ? 'true' : 'false') : 'false'), $varsFile);
+
                         fwrite($file, $varsFile . (($i < $nbColumns - 1) ? ',':'') . "\n");
-                        
+
                         // FileQuery
                         $methodsQuery = file_get_contents($basepath . '/class/ChildQuery-Methods.php');
                         $methodsQuery = str_replace('__COLUMN_FORMATED_NAME__', $colName, $methodsQuery);
@@ -308,7 +321,7 @@ function arrayToClass($database)
                         $i++;
                     }
                     fwrite($file, "\t];\n");
-                    
+
                     foreach($column as $key => $attr)
                     {
                         $colName = formatName($key);
@@ -341,7 +354,7 @@ if(sizeof($argv) > 2)
                 file_put_contents('database.sql', '');
                 fwrite($file, $sql);
                 fclose($file);
-                
+
                 arrayToClass($array);
             }
         }
