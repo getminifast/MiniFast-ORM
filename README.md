@@ -50,9 +50,9 @@ There will be no input if there is no error.
 
 ### How to use
 After running the installer, an autoloader has been created.
-Set up the MySQL host, user and password (defaults are `localhost`, `root` and `root`) in `/class/Base.php` and `/class/BaseQuery.php` `__construct()` methods.
+Set up the MySQL host, user and password (defaults are `localhost`, `root` and `root`) in `vendor/itechcydia/minifast-orm/src/minifast/Base.php` and `vendor/itechcydia/minifast-orm/src/minifast/BaseQuery.php` `__construct()` methods.
 
-An `autoload.php` file has been created and you need to include it in order to use MiniFast. Assuming you have the same `schema.xml` than the one above, you will find some examples below:
+An `autoload.php` file has been created by Composer and you need to include it in order to use MiniFast. Assuming you have the same `schema.xml` than the one above, you will find some examples below:
 
 #### INSERT
 ```php
