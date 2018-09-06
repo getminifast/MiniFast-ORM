@@ -241,6 +241,27 @@ class Database
         
         // TODO Foreign keys
         // TODO onDelete and onRestrict values
+        foreach($this->foreigns as $tableName => $table)
+        {
+            $i = 0;
+            foreach($table as $fk)
+            {
+                $this->sql .= ($i > 0 ? "\n" : '') . 'ALTER TABLE `' . $tableName . '` ADD CONSTRAINT `FK_' . ucfirst($fk['foreign-table']) . ucfirst($fk['foreign']) . ucfirst($tableName) . '` FOREIGN KEY (`' . $fk['local'] . '`) REFERENCES `' . $fk['foreign-table'] . '`(`' . $fk['foreign'] . '`) ON DELETE RESTRICT ON UPDATE RESTRICT;';
+                $i++;
+            }
+        }
+    }
+    
+    public function writeFile(string $fileName, string $content)
+    {
+        $file = fopen(__DIR__ . '/' . $fileName, 'a+');
+        file_put_contents(__DIR__ . '/' . $fileName, '');
+        fwrite($file, $content);
+    }
+    
+    public function getSQL()
+    {
+        return $this->sql;
     }
     
     public function show($var)

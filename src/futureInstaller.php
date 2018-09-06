@@ -15,7 +15,7 @@ if(sizeof($argv) > 2)
         {
             $database = new Database($argv[2]);
             $database->createSQL();
-            $database->show('sql');
+            $database->writeFile('database.sql', $database->getSQL());
         }
     }
     else
