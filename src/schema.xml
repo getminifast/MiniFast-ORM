@@ -18,6 +18,7 @@
         <column name="id" type="int" primaryKey="true" autoIncrement="true"/>
         <column name="categorie" type="int" required="true"/>
         <column name="text" type="text" required="true"/>
+        <column name="date" type="datetime" required="true"/>
         <foreign-key foreign-table="categorie">
             <reference local="categorie" foreign="id"/>
         </foreign-key>
