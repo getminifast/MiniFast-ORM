@@ -239,7 +239,6 @@ class Database
             $this->sql .= "\n) ENGINE=InnoDB;\n\n";
         }
         
-        // TODO Foreign keys
         // TODO onDelete and onRestrict values
         foreach($this->foreigns as $tableName => $table)
         {
@@ -250,6 +249,11 @@ class Database
                 $i++;
             }
         }
+    }
+    
+    public function createClass()
+    {
+        // TODO create classes from array
     }
     
     public function writeFile(string $fileName, string $content)
