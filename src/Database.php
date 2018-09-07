@@ -146,14 +146,14 @@ class Database
         // Check the column type
         if(isset($col['@attributes']['type']))
         {
-            $colName = $col['@attributes']['type'];
+            $colType = $col['@attributes']['type'];
         }
         else
         {
             die("'$colName' column type from $tableName is missing\n");
         }
         
-        $this->tables[$tableName][] = $col['@attributes'];
+        $this->tables[$tableName][$colName] = $col['@attributes'];
     }
     
     private function checkForeign(array $foreign, string $tableName, int $key)
@@ -186,6 +186,7 @@ class Database
         }
         
         $this->foreigns[$tableName][$key] = array_merge($foreign['@attributes'], $foreign['reference']['@attributes']);
+        $this->tables[$tableName][$this->foreigns[$tableName][$key]['local']]['foreign'] = $key;
     }
     
     public function createSQL()
@@ -253,14 +254,136 @@ class Database
     
     public function createClass()
     {
-        // TODO create classes from array
+        $basepath = dirname(__FILE__);
+        $autoload = fopen($basepath . '/autoload.php', 'a+');
+        file_put_contents($basepath . '/autoload.php', '');
+        fwrite($autoload, "<?php\n");
+
+        @$this->mkdirR($basepath . '/minifast');
+        $base = fopen($basepath . '/minifast/Base.php', 'a+');
+        file_put_contents($basepath . '/minifast/Base.php', '');
+        fwrite($base, str_replace('__DB_NAME__', $this->dbName, file_get_contents($basepath . '/class/Base.php')));
+        fclose($base);
+        fwrite($autoload, "include_once dirname(__FILE__).'/minifast/Base.php';\n");
+
+        $baseQuery = fopen($basepath . '/minifast/BaseQuery.php', 'a+');
+        file_put_contents($basepath . '/minifast/BaseQuery.php', '');
+        fwrite($baseQuery, str_replace('__DB_NAME__', $this->dbName, file_get_contents($basepath . '/class/BaseQuery.php')));
+        fwrite($autoload, "include_once dirname(__FILE__).'/minifast/BaseQuery.php';\n");
+
+        foreach($this->tables as $key => $table)
+        {
+            $tableN = $key;
+            $tableName = $this->formatName($key);
+            $path = $basepath . '/minifast/' . $tableName . '.php';
+            $pathQuery = $basepath . '/minifast/' . $tableName . 'Query.php';
+            $file = fopen($path, 'a+');
+            $fileQuery = fopen($pathQuery, 'a+');
+            file_put_contents($path, '');
+            file_put_contents($pathQuery, '');
+
+            fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName.php';\n");
+            fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName" . "Query.php';\n");
+
+            // Writting start of files
+            $beginFile = file_get_contents($basepath . '/class/Child-Start.php');
+            $beginFileQuery = file_get_contents($basepath . '/class/ChildQuery-Start.php');
+            $beginFile = str_replace('__TABLE_FORMATED_NAME__', $tableName, $beginFile);
+            $beginFileQuery = str_replace('__TABLE_FORMATED_NAME__', $tableName, $beginFileQuery);
+            fwrite($file, $beginFile);
+            fwrite($fileQuery, $beginFileQuery);
+
+            // Writting constructors
+            $constructFile = file_get_contents($basepath . '/class/Child-Construct.php');
+            $constructFileQuery = file_get_contents($basepath . '/class/ChildQuery-Construct.php');
+            $constructFile = str_replace('__TABLE_NAME__', $key, $constructFile);
+            $constructFile = str_replace('__TABLE_FORMATED_NAME__', $tableName, $constructFile);
+            $constructFileQuery = str_replace('__TABLE_NAME__', $key, $constructFileQuery);
+            $constructFileQuery = str_replace('__TABLE_FORMATED_NAME__', $tableName, $constructFileQuery);
+            fwrite($file, $constructFile);
+            fwrite($fileQuery, $constructFileQuery);
+
+            $i = 0;
+            $nbColumns = sizeof($table);
+            fwrite($file, "\tprivate \$vars = [\n");
+            
+            foreach($table as $column)
+            {
+                $colName = $this->formatName($column['name']);
+
+                // File
+                $varsFile = file_get_contents($basepath . '/class/Child-Vars.php');
+                $varsFile = str_replace('__COLUMN_NAME__', $column['name'], $varsFile);
+                if(isset($column['foreign']))
+                {
+                    //echo $key;
+                    $str = "['table' => '" . $this->formatName($this->foreigns[$tableN][$column['foreign']]['foreign-table']) . "', 'col' => '" . $this->foreigns[$tableN][$column['foreign']]['foreign'] . "']";
+                    $varsFile = str_replace('__IS_FOREIGN__', $str, $varsFile);
+                }
+                else
+                {
+                    $varsFile = str_replace('__IS_FOREIGN__', 'false', $varsFile);
+                }
+                $varsFile = str_replace('__COLUMN_TYPE__', $column['type'], $varsFile);
+                $varsFile = str_replace('__IS_REQUIRED__', (isset($column['required']) ? ($column['required'] ? 'true' : 'false') : 'false'), $varsFile);
+                $varsFile = str_replace('__IS_PRIMARY__', (isset($column['primaryKey']) ? ($column['primaryKey'] ? 'true' : 'false') : 'false'), $varsFile);
+
+                fwrite($file, $varsFile . (($i < $nbColumns - 1) ? ',':'') . "\n");
+
+                // FileQuery
+                $methodsQuery = file_get_contents($basepath . '/class/ChildQuery-Methods.php');
+                $methodsQuery = str_replace('__COLUMN_FORMATED_NAME__', $colName, $methodsQuery);
+                $methodsQuery = str_replace('__COLUMN_NAME__', $column['name'], $methodsQuery);
+                fwrite($fileQuery, $methodsQuery . "\n");
+                $i++;
+            }
+            
+            fwrite($file, "\t];\n");
+
+            foreach($table as $column)
+            {
+                $colName = $this->formatName($column['name']);
+                $methodsFile = file_get_contents($basepath . '/class/Child-Methods.php');
+                $methodsFile = str_replace('__COLUMN_FORMATED_NAME__', $colName, $methodsFile);
+                $methodsFile = str_replace('__COLUMN_NAME__', $column['name'], $methodsFile);
+                fwrite($file, $methodsFile . "\n");
+            }
+            fwrite($file, "}\n");
+            fwrite($fileQuery, "}\n");
+        }
     }
     
-    public function writeFile(string $fileName, string $content)
+    public function formatName(string $name)
+    {
+        $newName = explode('_', $name);
+        $names = [];
+        foreach($newName as $Name)
+        {
+            $names[] = ucfirst(strtolower($Name));
+        }
+
+        return implode($names);
+    }
+    
+    public function writeFile(string $fileName, string $content = '')
     {
         $file = fopen(__DIR__ . '/' . $fileName, 'a+');
         file_put_contents(__DIR__ . '/' . $fileName, '');
         fwrite($file, $content);
+    }
+    
+    private function mkdirR($path)
+    {
+        $path = explode('/', $path);
+        $current = '';
+        foreach($path as $dir)
+        {
+            $current .= (!empty($current) ? '/':'') . $dir;
+            if(!file_exists($current))
+            {
+                mkdir($current);
+            }
+        }
     }
     
     public function getSQL()
