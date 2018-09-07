@@ -207,7 +207,7 @@ function arrayToSQL($database)
 
 function mkdirR($path)
 {
-
+    $path = explode('/', $path);
     $current = '';
     foreach($path as $dir)
     {
@@ -239,7 +239,7 @@ function arrayToClass($database)
     file_put_contents($basepath . '/autoload.php', '');
     fwrite($autoload, "<?php\n");
 
-    @mkdir($basepath . '/minifast');
+    @mkdirR($basepath . '/minifast');
     $base = fopen($basepath . '/minifast/Base.php', 'a+');
     file_put_contents($basepath . '/minifast/Base.php', '');
     fwrite($base, str_replace('__DB_NAME__', $dbName, file_get_contents($basepath . '/class/Base.php')));
