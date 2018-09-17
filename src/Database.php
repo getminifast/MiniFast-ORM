@@ -31,6 +31,11 @@ class Database
         $this->checkDatabase($this->db);
     }
     
+    /**
+     * Convert XML file into a PHP array
+     * @param  string $file Path to the file we need
+     * @return array  A PHP array we can work with
+     */
     private function fileToArray($file)
     {
         // Getting content of schema
@@ -44,92 +49,83 @@ class Database
         return $array;
     }
     
+    /**
+     * Check if the database is good
+     * @param  array   $array The database as an array
+     * @return boolean True if database is ok
+     */
     private function checkDatabase(array $array)
     {
         // Check the database name
-        if(isset($array['@attributes']['name']))
-        {
+        if (isset($array['@attributes']['name'])) {
             $this->dbName = $array['@attributes']['name'];
             
             // Check tables
-            if(isset($array['table']))
-            {
-                if(isset($array['table']['@attributes']) or isset($array['table']['column']))
-                {
+            if (isset($array['table'])) {
+                if (isset($array['table']['@attributes']) or isset($array['table']['column'])) {
                     $this->checkTable($array['table'], 0);
-                }
-                else
-                {
-                    foreach($array['table'] as $tableKey => $table)
-                    {
+                } else {
+                    foreach ($array['table'] as $tableKey => $table) {
                         $this->checkTable($table, $tableKey);
                     }
                 }
-            }
-            else
-            {
+            } else {
                 die("$databaseName has no table\n");
             }
-        }
-        else
-        {
+        } else {
             die("Database has no name\n");
         }
         
         return true;
     }
     
+    /**
+     * Check the table integrity
+     * @param array $table A table as an array
+     * @param int   $key   The index of the table in case table name is missing
+     */
     private function checkTable(array $table, $key)
     {
         // Check the table name
-        if(isset($table['@attributes']['name']))
-        {
+        if (isset($table['@attributes']['name'])) {
             $tableName = $table['@attributes']['name'];
             $this->tables[$tableName] = [];
             $this->foreigns[$tableName] = [];
             
             // Check columns
-            if(isset($table['column']))
-            {
-                if(isset($table['column']['@attributes']))
-                {
+            if (isset($table['column'])) {
+                if (isset($table['column']['@attributes'])) {
                     $this->checkColumn($table['column'], $tableName, 0);
-                }
-                else
-                {
-                    foreach($table['column'] as $columnKey => $col)
-                    {
+                } else {
+                    foreach ($table['column'] as $columnKey => $col) {
                         $this->checkColumn($col, $tableName, $columnKey);
                     }
                 }
-            }
-            else
-            {
+            } else {
                 die("Table $tableName has no column\n");
             }
 
             // Check foreign keys
-            if(isset($table['foreign-key']))
-            {
-                if(isset($table['foreign-key']['@attributes']) or isset($table['foreign-key']['reference']))
-                {
+            if (isset($table['foreign-key'])) {
+                if (isset($table['foreign-key']['@attributes']) or isset($table['foreign-key']['reference'])) {
                     $this->checkForeign($table['foreign-key'], $tableName, 0);
-                }
-                else
-                {
-                    foreach($table['foreign-key'] as $foreignKey => $foreign)
-                    {
+                } else {
+                    foreach ($table['foreign-key'] as $foreignKey => $foreign) {
                         $this->checkForeign($foreign, $tableName, 0);
                     }
                 }
             }
-        }
-        else
-        {
+        } else {
             die("Table $key has no name\n");
         }
     }
     
+    /**
+     * Check the column integrity
+     * @param array  $col       The column to check as an array
+     * @param string $tableName The table name in case of error
+     * @param int    $key       The column index in case column name is missing
+     */
     private function checkColumn(array $col, string $tableName, int $key)
     {
         $colName = '';
@@ -144,42 +140,39 @@ class Database
         }
         
         // Check the column type
-        if(isset($col['@attributes']['type']))
-        {
+        if (isset($col['@attributes']['type'])) {
             $colType = $col['@attributes']['type'];
-        }
-        else
-        {
+        } else {
             die("'$colName' column type from $tableName is missing\n");
         }
         
         $this->tables[$tableName][$colName] = $col['@attributes'];
     }
     
+    /**
+     * Check foreign key integrity
+     * @param array  $foreign   Foreign key as an array
+     * @param string $tableName The table name in case of error
+     * @param int    $key       The foreign key index in case forein attribtue is missing
+     */
     private function checkForeign(array $foreign, string $tableName, int $key)
     {
         // Check the foreign table
-        if(isset($foreign['@attributes']['foreign-table']))
-        {
+        if (isset($foreign['@attributes']['foreign-table'])) {
             $foreignTable = $foreign['@attributes']['foreign-table'];
-        }
-        else
-        {
+        } else {
             die("The foreign key $key from $tableName has no foreign-table attribute\n");
         }
 
         // Check the reference
-        if(isset($foreign['reference']))
-        {
+        if (isset($foreign['reference'])) {
             $attributes = [
                 'local',
                 'foreign'
             ];
 
-            foreach($attributes as $attr)
-            {
-                if(!isset($foreign['reference']['@attributes'][$attr]))
-                {
+            foreach ($attributes as $attr) {
+                if (!isset($foreign['reference']['@attributes'][$attr])) {
                     die("'$attr' attribute from foreign key $key from $tableName is missing\n");
                 }
             }
@@ -189,41 +182,31 @@ class Database
         $this->tables[$tableName][$this->foreigns[$tableName][$key]['local']]['foreign'] = $key;
     }
     
+    /**
+     * Create an SQL database creation script from a PHP array
+     */
     public function createSQL()
     {
         $this->sql = '';
         $this->sql .= "CREATE DATABASE IF NOT EXISTS `$this->dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\nUSE `$this->dbName`;\n\n";
         
-        foreach($this->tables as $tableName => $table)
-        {
+        foreach ($this->tables as $tableName => $table) {
             $this->sql .= "CREATE TABLE IF NOT EXISTS `$tableName` (\n";
             $i = 0;
-            foreach($table as $col)
-            {
-                foreach($this->supportedAttr as $key => $expected)
-                {
+            foreach ($table as $col) {
+                foreach ($this->supportedAttr as $key => $expected) {
                     $$key = '';
-                    if(isset($col[$key]))
-                    {
-                        if($key == 'type')
-                        {
-                            if(in_array($col[$key], $this->supportedTypes))
-                            {
+                    if (isset($col[$key])) {
+                        if ($key == 'type') {
+                            if (in_array($col[$key], $this->supportedTypes)) {
                                 $$key = strtoupper($col[$key]);
-                            }
-                            else
-                            {
+                            } else {
                                 die("Unsuported type $col[$key]\n");
                             }
-                        }
-                        else
-                        {
-                            if($expected == 'boolean')
-                            {
+                        } else {
+                            if ($expected == 'boolean') {
                                 $$key = json_decode($col[$key]);
-                            }
-                            else
-                            {
+                            } else {
                                 $$key = $col[$key];
                             }
                         }
@@ -241,17 +224,18 @@ class Database
         }
         
         // TODO onDelete and onRestrict values
-        foreach($this->foreigns as $tableName => $table)
-        {
+        foreach ($this->foreigns as $tableName => $table) {
             $i = 0;
-            foreach($table as $fk)
-            {
+            foreach ($table as $fk) {
                 $this->sql .= ($i > 0 ? "\n" : '') . 'ALTER TABLE `' . $tableName . '` ADD CONSTRAINT `FK_' . ucfirst($fk['foreign-table']) . ucfirst($fk['foreign']) . ucfirst($tableName) . '` FOREIGN KEY (`' . $fk['local'] . '`) REFERENCES `' . $fk['foreign-table'] . '`(`' . $fk['foreign'] . '`) ON DELETE RESTRICT ON UPDATE RESTRICT;';
                 $i++;
             }
         }
     }
     
+    /**
+     * Create all classes based on database
+     */
     public function createClass()
     {
         $basepath = dirname(__FILE__);
@@ -271,8 +255,7 @@ class Database
         fwrite($baseQuery, str_replace('__DB_NAME__', $this->dbName, file_get_contents($basepath . '/class/BaseQuery.php')));
         fwrite($autoload, "include_once dirname(__FILE__).'/minifast/BaseQuery.php';\n");
 
-        foreach($this->tables as $key => $table)
-        {
+        foreach ($this->tables as $key => $table) {
             $tableN = $key;
             $tableName = $this->formatName($key);
             $path = $basepath . '/minifast/' . $tableName . '.php';
@@ -307,21 +290,17 @@ class Database
             $nbColumns = sizeof($table);
             fwrite($file, "\tprivate \$vars = [\n");
             
-            foreach($table as $column)
-            {
+            foreach ($table as $column) {
                 $colName = $this->formatName($column['name']);
 
                 // File
                 $varsFile = file_get_contents($basepath . '/class/Child-Vars.php');
                 $varsFile = str_replace('__COLUMN_NAME__', $column['name'], $varsFile);
-                if(isset($column['foreign']))
-                {
+                if (isset($column['foreign'])) {
                     //echo $key;
                     $str = "['table' => '" . $this->formatName($this->foreigns[$tableN][$column['foreign']]['foreign-table']) . "', 'col' => '" . $this->foreigns[$tableN][$column['foreign']]['foreign'] . "']";
                     $varsFile = str_replace('__IS_FOREIGN__', $str, $varsFile);
-                }
-                else
-                {
+                } else {
                     $varsFile = str_replace('__IS_FOREIGN__', 'false', $varsFile);
                 }
                 $varsFile = str_replace('__COLUMN_TYPE__', $column['type'], $varsFile);
@@ -353,18 +332,27 @@ class Database
         }
     }
     
+    /**
+     * Format a name to call it proprely in classes
+     * @param  string $name The name to format
+     * @return string The formated name
+     */
     public function formatName(string $name)
     {
         $newName = explode('_', $name);
         $names = [];
-        foreach($newName as $Name)
-        {
+        foreach ($newName as $Name) {
             $names[] = ucfirst(strtolower($Name));
         }
 
         return implode($names);
     }
     
+    /**
+     * Open a file, clean it and fill it
+     * @param string $fileName The file path/name
+     * @param string $content  The string to be inserted in a file
+     */
     public function writeFile(string $fileName, string $content = '')
     {
         $file = fopen(__DIR__ . '/' . $fileName, 'a+');
@@ -372,25 +360,35 @@ class Database
         fwrite($file, $content);
     }
     
+    /**
+     * Create a directory and its subdirectories recursivly
+     * @param string $path The path to create
+     */
     private function mkdirR($path)
     {
         $path = explode('/', $path);
         $current = '';
-        foreach($path as $dir)
-        {
+        foreach ($path as $dir) {
             $current .= (!empty($current) ? '/':'') . $dir;
-            if(!file_exists($current))
-            {
+            if (!file_exists($current)) {
                 mkdir($current);
             }
         }
     }
     
+    /**
+     * Return SQL script
+     * @return string The SQL
+     */
     public function getSQL()
     {
         return $this->sql;
     }
     
+    /**
+     * var_dump a variable for debug
+     * @param string $var The output
+     */
     public function show($var)
     {
         var_dump($this->$var);
