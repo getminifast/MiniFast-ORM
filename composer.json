@@ -19,7 +19,7 @@
         ],
         "psr-4": {
             "MiniFastORM\\": "src/base/",
-            "MiniFastORM\\Table\\": "../tables/"
+            "MiniFastORM\\Table\\": "../../../tables/"
         }
     }
 }
