@@ -6,6 +6,7 @@ class Record
 {
     private $name;
     private $columns = [];
+    private $foreigns = [];
     private $types = [
         'INTEGER', 'INT', 'SMALLINT', 'TINYINT', 'MEDIUMINT', 'BIGINT',
         'DECIMAL', 'NUMERIC',
@@ -14,10 +15,10 @@ class Record
         'CHAR', 'VARCHAR', 'BINARY', 'VARBINARY', 'BLOB', 'TEXT', 'ENUM', 'SET'
     ];
     private $attributes = [
-        'PRIMARY'
+        'PRIMARYKEY',
         'AUTOINCREMENT',
         'DEFAULT',
-        'NOTNULL'
+        'REQUIRED'
     ];
 
     public function setTableName(string $name)
@@ -27,11 +28,11 @@ class Record
 
     public function hasColumn(string $name, string $type, $size, array $attributes = [])
     {
-        if(!empty($name) and !empty($type) and in_array(strtoupper($type), $this->types;)) {
+        if(!empty($name) and !empty($type) and in_array(strtoupper($type), $this->types)) {
             $continue = true;
             $concerned = '';
             foreach ($attributes as $key => $value) {
-                if (!in_array($key, $this->attributes)) {
+                if (!in_array(strtoupper($key), $this->attributes)) {
                     $continue = false;
                     $concerned = $key;
                     break;
@@ -45,10 +46,27 @@ class Record
                     'attributes' => $attributes
                 ];
             } else {
-                throw new Exception("Unknow attribute $concerned.");
+                throw new \Exception("Unknow attribute $concerned.");
             }
         } else {
-            throw new Exception('Column name and type cannot be empty.');
+            throw new \Exception('Column name and type cannot be empty.');
+        }
+        return $this;
+    }
+    
+    public function hasOne($class, array $attributes)
+    {
+        if (isset($attributes['local']) and isset($attributes['foreign'])) {
+            $attributes['relation'] = 'hasOne';
+            $this->foreigns[$class] = $attributes;
+        }
+    }
+    
+    public function hasMany($class, array $attributes)
+    {
+        if (isset($attributes['local']) and isset($attributes['foreign'])) {
+            $attributes['relation'] = 'hasMany';
+            $this->foreigns[$class] = $attributes;
         }
     }
 
@@ -56,7 +74,8 @@ class Record
     {
         return [
             'name' => $this->name,
-            'columns' => $this->columns
+            'columns' => $this->columns,
+            'foreigns' => $this->foreigns
         ];
     }
 }
