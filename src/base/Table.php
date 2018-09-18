@@ -29,10 +29,10 @@ class Table
         }
     }
     
-    public static function create()
+    public static function query()
     {
         $this->query = true;
-        return new __CLASS__();
+        return new $this;
     }
     
     protected function set(string $col, $value)
