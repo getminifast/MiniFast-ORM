@@ -4,27 +4,55 @@ namespace MiniFastORM;
 
 class Table
 {
-    private $name;
-    private $columns = [];
-    private $types = [
-        'INTEGER', 'INT', 'SMALLINT', 'TINYINT', 'MEDIUMINT', 'BIGINT',
-        'DECIMAL', 'NUMERIC',
-        'FLOAT', 'DOUBLE',
-        'DATE', 'TIME', 'DATETIME', 'TIMESTAMP', 'YEAR',
-        'CHAR', 'VARCHAR', 'BINARY', 'VARBINARY', 'BLOB', 'TEXT', 'ENUM', 'SET'
-    ];
+    protected $columns = [];
+    protected $values = [];
+    protected $table = '';
+    protected $connection;
+    protected $query = false;
     
-    public function setTableName(string $name)
+    public function __call($name, $arguments)
     {
-        $this->name = $name;
+        if (strpos($name, 'set') === 0) {
+            $name = substr($name, 0, 3);
+            $name = unFormatName($name);
+            
+            $this->set($name, $value);
+        }
     }
     
-    public function hasColumn(string $name, string $type, $size, array $attributes = [])
+    protected function set(string $col, $value)
     {
-        if(!empty($name) and !empty($type) and in_array(strtoupper($type), $this->types;)) {
-            $this->columns[$name] = [];
+        $this->columns[] = $col;
+        $this->values[$col] = $value;
+    }
+
+    /*
+     * Insert data into the database
+     */
+    public function save()
+    {
+        $database = Database::getInstance()->getPDO();
+        
+        if (!empty($this->table) and !empty($this->columns) and !empty($this->values)) {
+            $query = 'INSERT INTO'
+                . $this->table
+                . '(' . implode(', ', $this->columns) . ') '
+                . 'VALUES(:' . implode(', :', $this->columns) . ')';
+            $req = $database->prepare($query);
+            $req->execute($this->values);
         } else {
-            throw new Exception('Column name and type cannot be empty.');
+            throw new Exception('You cannot save before inserting data.');
         }
+    }
+
+    public static function now()
+    {
+        return date('AAA-MM-DD hh:mm:ss');
+    }
+    
+    protected function unFormatName($name)
+    {
+        $exploded = preg_replace('/([A-Z])/', '_$1', $string);
+        return strtolower($exploded);
     }
 }
