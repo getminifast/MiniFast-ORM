@@ -21,4 +21,14 @@ class Database extends Singleton
     {
         
     }
+    
+    public function getTable()
+    {
+        
+    }
+    
+    public function getPDO()
+    {
+        return $this->connection;
+    }
 }
