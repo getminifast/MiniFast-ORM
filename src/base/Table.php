@@ -219,6 +219,8 @@ class Table
             'col' => $col,
             'name' => $name
         ];
+        
+        return $this;
     }
 
     public function delete($all = false)
