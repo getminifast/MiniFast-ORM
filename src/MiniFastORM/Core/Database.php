@@ -135,12 +135,9 @@ class Database
     {
         $colName = '';
         // Check the column name
-        if(isset($col['@attributes']['name']))
-        {
+        if (isset($col['@attributes']['name'])) {
             $colName = $col['@attributes']['name'];
-        }
-        else
-        {
+        } else {
             die("Column $key name from $tableName is missing\n");
         }
         
@@ -247,7 +244,8 @@ class Database
      * @param    bool     $capitalise_first_char   If true, capitalise the first char in $str
      * @return   string                            $str translated into camel caps
      */
-    protected function toCamelCase($str, $capitalise_first_char = false) {
+    protected function toCamelCase($str, $capitalise_first_char = false)
+    {
         if ($capitalise_first_char) {
             $str[0] = strtoupper($str[0]);
         }
