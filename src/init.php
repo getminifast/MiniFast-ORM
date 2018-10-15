@@ -6,9 +6,7 @@ use \MiniFastORM\Core\Database;
 
 function printUsage()
 {
-    echo "Usage: installer.php <init|update> <xml_file>\n";
-    echo " - init\t\tWill create the database script and classes from the xml file.\n";
-    echo " - update\tWill create a script to update your database et create/update your classes.\n";
+    echo "Usage: init.php <xml_file>\n";
 }
 
 if(sizeof($argv) > 1)
