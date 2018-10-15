@@ -19,8 +19,7 @@
             "src/autoload.php"
         ],
         "psr-4": {
-            "MiniFastORM\\": "src/base/",
-            "MiniFastORM\\Table\\": "../../../tables/"
+            "MiniFastORM\\": "src/MiniFastORM/"
         }
     }
 }
