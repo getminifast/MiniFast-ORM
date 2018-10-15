@@ -44,7 +44,7 @@ Install MiniFast with [Composer](https://getcomposer.org/) by adding it to the `
 ```
 There is an installer included in MiniFast that will create classes for you based on your xml schema. Assuming you are in your website root directory, execute it like this:
 ```bash
-$ php vendor/itechcydia/minifast-orm/installer.php init /path/to/schema.xml
+$ php vendor/minifast/minifast-orm/init.php /path/to/schema.xml
 ```
 There will be no input if there is no error.
 
