@@ -1,7 +1,10 @@
 <?php
 
+namespace MiniFastORM\Core;
+
 class BaseQuery
 {
+    protected $container = new Container();
     private $co;
     private $table;
     private $base;
@@ -24,28 +27,11 @@ class BaseQuery
 
     public function __construct($table)
     {
-        $pdo_options[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
+        $this->co = $this->container->getConnection();
 
-        $host = 'localhost';
-        $dbname = '__DB_NAME__';
-        $user = 'root';
-        $password = 'root';
-
-        try
-        {
-            $this->co = new PDO('mysql:host='.$host.';dbname='.$dbname.'', $user, $password, $pdo_options);
-        }
-        catch (Exception $e)
-        {
-            die('Erreur : ' . $e->getMessage());
-        }
-
-        if(!empty($table))
-        {
+        if (!empty($table)) {
             $this->table = $table;
-        }
-        else
-        {
+        } else {
             throw new Exception('You need to specify the table');
         }
     }
@@ -66,27 +52,23 @@ class BaseQuery
         $query = 'SELECT ' . $table . '.* ';
 
         // count
-        if(!empty($this->count))
-        {
+        if (!empty($this->count)) {
             $query .= ' , COUNT(' . $this->count['col'] . ') AS ' . $this->count['name'] . ' ';
         }
 
         $query .= 'FROM ' . $table;
 
         // where
-        if(!empty($this->filters) and !empty($this->filterValues))
-        {
+        if (!empty($this->filters) and !empty($this->filterValues)) {
             $i = 0;
-            foreach($this->filters as $filter)
-            {
+            foreach ($this->filters as $filter) {
                 $query .= ($i > 0 ? ' AND ':' WHERE ') . $filter . ' ' . (!empty($this->criteria) ? $this->criteria : '=') . ' :' . $filter . 'Filter';
                 $i++;
             }
         }
 
         // limit
-        if(!empty($this->limit))
-        {
+        if (!empty($this->limit)) {
             $query .= ' LIMIT ' . (!empty($this->offset) ? $this->offset . ', ' : '') . $this->limit;
         }
 
@@ -115,10 +97,8 @@ class BaseQuery
         $base = new $class();
         $columns = $base->getColumns();
 
-        foreach($columns as $key => $col)
-        {
-            if($col['foreign'])
-            {
+        foreach ($columns as $key => $col) {
+            if ($col['foreign']) {
                 $fetch[$key] = self::fetchForeign($col['foreign']['col'], $fetch[$key], $col['foreign']['table']);
             }
         }
@@ -135,20 +115,15 @@ class BaseQuery
         $columns = $base->getColumns();
         $fks = [];
 
-        foreach($columns as $key => $col)
-        {
-            if($col['foreign'])
-            {
+        foreach ($columns as $key => $col) {
+            if ($col['foreign']) {
                 $fks[$key] = $col['foreign'];
             }
         }
 
-        if(sizeof($fks) > 0)
-        {
-            foreach($fetchAll as $key => $entry)
-            {
-                foreach($fks as $k2 => $fk)
-                {
+        if (sizeof($fks) > 0) {
+            foreach ($fetchAll as $key => $entry) {
+                foreach ($fks as $k2 => $fk) {
                     $fetchAll[$key][$k2] = self::fetchForeign($fk['col'], $fetchAll[$key][$k2], $fk['table']);
                 }
             }
@@ -167,12 +142,9 @@ class BaseQuery
         $this->filters[] = $col;
         $this->filterValues[$col . 'Filter'] = $value;
 
-        if(in_array($criteria, $this->criterias))
-        {
+        if (in_array($criteria, $this->criterias)) {
             $this->criteria = $criteria;
-        }
-        else
-        {
+        } else {
             throw new Exception("Unknow criteria `$criteria`.");
         }
 
@@ -208,8 +180,7 @@ class BaseQuery
 
     public function findPK(int $id)
     {
-        if(!empty($this->table))
-        {
+        if (!empty($this->table)) {
             $query = 'SELECT ' . $this->table . '.* FROM ' . $this->table . ' WHERE ' . $this->table . '.id = :id';
             //                        $req = $this->co->prepare($query);
             //                        $req->execute([
@@ -218,9 +189,7 @@ class BaseQuery
             //
             //                        return $req->fetch();
             return $query;
-        }
-        else
-        {
+        } else {
             throw new Exception('Table cannot be empty');
         }
     }
@@ -228,51 +197,41 @@ class BaseQuery
     public function findPKs(array $keys)
     {
         // TODO findPKs
-        if(!empty($this->table) and sizeof($keys) > 0)
-        {
+        if (!empty($this->table) and sizeof($keys) > 0) {
             $query = 'SELECT * FROM ' . $this->table . ' WHERE ';
 
             $i = 0;
-            foreach($keys as $key)
-            {
+            foreach ($keys as $key) {
                 $query .= ($i > 0 ? ' OR ' : '') . 'id = ?';
                 $i++;
             }
 
             return $query;
 
-            //            $req = $this->co->prepare($query);
+        //            $req = $this->co->prepare($query);
             //            $req->execute($keys);
-            //            
+            //
             //            return $req->fetchAll();
-        }
-        else
-        {
+        } else {
             throw new Exception('Table cannot be empty');
         }
     }
 
     public function delete($all = false)
     {
-        if(!empty($this->filters) and !empty($this->filterValues))
-        {
+        if (!empty($this->filters) and !empty($this->filterValues)) {
             $query = 'DELETE FROM ' . $this->table . ' WHERE ';
             $i = 0;
-            foreach($this->filters as $col)
-            {
+            foreach ($this->filters as $col) {
                 $query .= ($i > 0 ? ' AND ':'') . $col . ' = :' . $col . 'Filter';
             }
 
             $req = $this->co->prepare($query);
             $req->execute($this->filterValues);
-        }
-        else{
-            if($all)
-            {
+        } else {
+            if ($all) {
                 $req = $this->co->query("DELETE FROM $this->table");
-            }
-            else
-            {
+            } else {
                 throw new Exception("If you want to delete all from $this->table, you need to specify optional argument delete(\$all = true)\n");
             }
         }
@@ -281,32 +240,26 @@ class BaseQuery
     public function save()
     {
         // TODO save
-        if(!empty($this->table) and !empty($this->cols) and !empty($this->values))
-        {
+        if (!empty($this->table) and !empty($this->cols) and !empty($this->values)) {
             $query = 'UPDATE ' . $this->table . ' SET ';
 
             $i = 0;
-            foreach($this->cols as $col)
-            {
+            foreach ($this->cols as $col) {
                 $query .= ($i > 0 ? ', ':'') . $col . ' = :' . $col . 'Update';
                 $i++;
             }
 
-            if(!empty($this->filters) and !empty($this->filterValues))
-            {
+            if (!empty($this->filters) and !empty($this->filterValues)) {
                 $query .= ' WHERE ';
                 $i = 0;
-                foreach($this->filters as $col)
-                {
+                foreach ($this->filters as $col) {
                     $query .= ($i > 0 ? ' AND ':'') . $col . ' = :' . $col . 'Filter';
                 }
             }
 
             $req = $this->co->prepare($query);
             $req->execute(array_merge($this->values, $this->filterValues));
-        }
-        else
-        {
+        } else {
             throw new Exception('Nothing to update');
         }
     }
@@ -320,8 +273,7 @@ class BaseQuery
     {
         $newName = explode('_', $name);
         $names = [];
-        foreach($newName as $Name)
-        {
+        foreach ($newName as $Name) {
             $names[] = ucfirst(strtolower($Name));
         }
 

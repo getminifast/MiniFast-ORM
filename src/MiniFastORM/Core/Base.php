@@ -1,7 +1,10 @@
 <?php
 
+namespace MiniFastORM\Core;
+
 class Base
 {
+    protected $container = new Container();
     private $cols = [];
     private $values = [];
     private $table;
@@ -12,30 +15,12 @@ class Base
 
     public function __construct(string $table)
     {
+        $this->co = $this->container->getConnection();
 
-        $pdo_options[PDO::ATTR_ERRMODE] = PDO::ERRMODE_EXCEPTION;
-
-        $host = 'localhost';
-        $dbname = '__DB_NAME__';
-        $user = 'root';
-        $password = 'root';
-
-        try
-        {
-            $this->co = new PDO('mysql:host='.$host.';dbname='.$dbname.'', $user, $password, $pdo_options);
-        }
-        catch (Exception $e)
-        {
-            die('Erreur : ' . $e->getMessage());
-        }
-
-        if(!empty($table))
-        {
+        if (!empty($table)) {
             $this->table = $table;
-        }
-        else
-        {
-            throw new Exception('Vous devez renseigner la table utilisée');
+        } else {
+            throw new \Exception('Used table is missing.' . PHP_EOL);
         }
     }
 
@@ -57,16 +42,14 @@ class Base
     {
 
         // If data has been set
-        if(!empty($this->table) and !empty($this->cols) and !empty($this->values))
-        {
+        if (!empty($this->table) and !empty($this->cols) and !empty($this->values)) {
             $query = self::INSERT . ' ' . $this->table . '(' . implode(', ', $this->cols) . ') ' . self::VALUES . '(:' . implode(', :', $this->cols) . ')';
             $req = $this->co->prepare($query);
             $req->execute($this->values);
         }
         // Else, error
-        else
-        {
-            throw new Exception('You cannot save before inserting data.');
+        else {
+            throw new \Exception('You cannot save before inserting data.');
         }
     }
     
