@@ -3,6 +3,7 @@
 namespace MiniFastORM\Core;
 
 use \Nette\PhpGenerator\PhpLiteral;
+use \Symfony\Component\Filesystem\Filesystem;
 
 class Database
 {
@@ -258,7 +259,8 @@ class Database
     public function createClasses()
     {
         $basepath = dirname(__FILE__);
-        @$this->mkdirR($basepath . '/minifast');
+        $filesystem = new Filesystem();
+        $filesystem->mkdir($basepath . '/MiniFastORM');
         $printer = new \Nette\PhpGenerator\PsrPrinter;
         
         // For each table
@@ -276,6 +278,10 @@ class Database
                 ->setExtends('\MiniFastORM\Core\Base');
             $methodConstruct = $class->addMethod('__construct')
                 ->addBody('parent::__construct(?);', [$key]);
+            $methodGetColumns = $class->addMethod('getColumns')
+                ->addBody('return $this->vars;')
+                ->addComment('Fetch all columns from this class')
+                ->addComment('@return array All columns of this table');
             
             $classQuery = $namespaceQuery->addClass($this->toCamelCase($key, true) . 'Query')
                 ->setExtends('\MiniFastORM\Core\BaseQuery');
@@ -353,144 +359,9 @@ class Database
             
             $classQuery->addProperty('base', $this->toCamelCase($key, true))
                 ->setVisibility('protected');
-            
-//            echo $printer->printFile($file);
-            echo $printer->printFile($fileQuery);
-        }
-        
-        /* OLD CODE DO NOT TOUCH OR IT WILL BREAK THE UNIVERSE */
-//        fwrite($autoload, "<?php\n");
-//
-//        @$this->mkdirR($basepath . '/minifast');
-//        $base = fopen($basepath . '/minifast/Base.php', 'a+');
-//        file_put_contents($basepath . '/minifast/Base.php', '');
-//        fwrite($base, str_replace('__DB_NAME__', $this->dbName, file_get_contents($basepath . '/class/Base.php')));
-//        fclose($base);
-//        fwrite($autoload, "include_once dirname(__FILE__).'/minifast/Base.php';\n");
-//
-//        $baseQuery = fopen($basepath . '/minifast/BaseQuery.php', 'a+');
-//        file_put_contents($basepath . '/minifast/BaseQuery.php', '');
-//        fwrite($baseQuery, str_replace('__DB_NAME__', $this->dbName, file_get_contents($basepath . '/class/BaseQuery.php')));
-//        fwrite($autoload, "include_once dirname(__FILE__).'/minifast/BaseQuery.php';\n");
-//
-//        foreach ($this->tables as $key => $table) {
-//            $tableN = $key;
-//            $tableName = $this->formatName($key);
-//            $path = $basepath . '/minifast/' . $tableName . '.php';
-//            $pathQuery = $basepath . '/minifast/' . $tableName . 'Query.php';
-//            $file = fopen($path, 'a+');
-//            $fileQuery = fopen($pathQuery, 'a+');
-//            file_put_contents($path, '');
-//            file_put_contents($pathQuery, '');
-//
-//            fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName.php';\n");
-//            fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName" . "Query.php';\n");
-//
-//            // Writting start of files
-//            $beginFile = file_get_contents($basepath . '/class/Child-Start.php');
-//            $beginFileQuery = file_get_contents($basepath . '/class/ChildQuery-Start.php');
-//            $beginFile = str_replace('__TABLE_FORMATED_NAME__', $tableName, $beginFile);
-//            $beginFileQuery = str_replace('__TABLE_FORMATED_NAME__', $tableName, $beginFileQuery);
-//            fwrite($file, $beginFile);
-//            fwrite($fileQuery, $beginFileQuery);
-//
-//            // Writting constructors
-//            $constructFile = file_get_contents($basepath . '/class/Child-Construct.php');
-//            $constructFileQuery = file_get_contents($basepath . '/class/ChildQuery-Construct.php');
-//            $constructFile = str_replace('__TABLE_NAME__', $key, $constructFile);
-//            $constructFile = str_replace('__TABLE_FORMATED_NAME__', $tableName, $constructFile);
-//            $constructFileQuery = str_replace('__TABLE_NAME__', $key, $constructFileQuery);
-//            $constructFileQuery = str_replace('__TABLE_FORMATED_NAME__', $tableName, $constructFileQuery);
-//            fwrite($file, $constructFile);
-//            fwrite($fileQuery, $constructFileQuery);
-//
-//            $i = 0;
-//            $nbColumns = sizeof($table);
-//            fwrite($file, "\tprivate \$vars = [\n");
-//            
-//            foreach ($table as $column) {
-//                $colName = $this->formatName($column['name']);
-//
-//                // File
-//                $varsFile = file_get_contents($basepath . '/class/Child-Vars.php');
-//                $varsFile = str_replace('__COLUMN_NAME__', $column['name'], $varsFile);
-//                if (isset($column['foreign'])) {
-//                    //echo $key;
-//                    $str = "['table' => '" . $this->formatName($this->foreigns[$tableN][$column['foreign']]['foreign-table']) . "', 'col' => '" . $this->foreigns[$tableN][$column['foreign']]['foreign'] . "']";
-//                    $varsFile = str_replace('__IS_FOREIGN__', $str, $varsFile);
-//                } else {
-//                    $varsFile = str_replace('__IS_FOREIGN__', 'false', $varsFile);
-//                }
-//                $varsFile = str_replace('__COLUMN_TYPE__', $column['type'], $varsFile);
-//                $varsFile = str_replace('__IS_REQUIRED__', (isset($column['required']) ? ($column['required'] ? 'true' : 'false') : 'false'), $varsFile);
-//                $varsFile = str_replace('__IS_PRIMARY__', (isset($column['primaryKey']) ? ($column['primaryKey'] ? 'true' : 'false') : 'false'), $varsFile);
-//
-//                fwrite($file, $varsFile . (($i < $nbColumns - 1) ? ',':'') . "\n");
-//
-//                // FileQuery
-//                $methodsQuery = file_get_contents($basepath . '/class/ChildQuery-Methods.php');
-//                $methodsQuery = str_replace('__COLUMN_FORMATED_NAME__', $colName, $methodsQuery);
-//                $methodsQuery = str_replace('__COLUMN_NAME__', $column['name'], $methodsQuery);
-//                fwrite($fileQuery, $methodsQuery . "\n");
-//                $i++;
-//            }
-//            
-//            fwrite($file, "\t];\n");
-//
-//            foreach($table as $column)
-//            {
-//                $colName = $this->formatName($column['name']);
-//                $methodsFile = file_get_contents($basepath . '/class/Child-Methods.php');
-//                $methodsFile = str_replace('__COLUMN_FORMATED_NAME__', $colName, $methodsFile);
-//                $methodsFile = str_replace('__COLUMN_NAME__', $column['name'], $methodsFile);
-//                fwrite($file, $methodsFile . "\n");
-//            }
-//            fwrite($file, "}\n");
-//            fwrite($fileQuery, "}\n");
-//        }
-    }
-    
-    /**
-     * Format a name to call it proprely in classes
-     * @param  string $name The name to format
-     * @return string The formated name
-     */
-    public function formatName(string $name)
-    {
-        $newName = explode('_', $name);
-        $names = [];
-        foreach ($newName as $Name) {
-            $names[] = ucfirst(strtolower($Name));
-        }
 
-        return implode($names);
-    }
-    
-    /**
-     * Open a file, clean it and fill it
-     * @param string $fileName The file path/name
-     * @param string $content  The string to be inserted in a file
-     */
-    public function writeFile(string $fileName, string $content = '')
-    {
-        $file = fopen(__DIR__ . '/' . $fileName, 'a+');
-        file_put_contents(__DIR__ . '/' . $fileName, '');
-        fwrite($file, $content);
-    }
-    
-    /**
-     * Create a directory and its subdirectories recursivly
-     * @param string $path The path to create
-     */
-    private function mkdirR($path)
-    {
-        $path = explode('/', $path);
-        $current = '';
-        foreach ($path as $dir) {
-            $current .= (!empty($current) ? '/':'') . $dir;
-            if (!file_exists($current)) {
-                mkdir($current);
-            }
+            $filesystem->dumpFile($basepath . '/MiniFastORM/' . $this->toCamelCase($key, true) . '.php', $printer->printFile($file));
+            $filesystem->dumpFile($basepath . '/MiniFastORM/' . $this->toCamelCase($key, true) . 'Query.php', $printer->printFile($fileQuery));
         }
     }
     
