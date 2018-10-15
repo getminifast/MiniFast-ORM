@@ -236,6 +236,9 @@ class Database
                 $i++;
             }
         }
+        
+        $filesystem = new Filesystem();
+        $filesystem->dumpFile('database.sql', $this->sql);
     }
     
     /**
