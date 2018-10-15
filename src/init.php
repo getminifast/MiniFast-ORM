@@ -6,7 +6,7 @@ use \MiniFastORM\Core\Database;
 
 function printUsage()
 {
-    echo "Usage: init.php <xml_file>\n";
+    echo "Usage: init.php <xml_file>" . PHP_EOL;
 }
 
 if(sizeof($argv) > 1)
