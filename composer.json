@@ -11,11 +11,13 @@
         }
     ],
     "require": {
-        "php": "^7.0"
+        "php": "^7.0",
+        "nette/php-generator": "3.2",
+        "symfony/filesystem": "^4.1"
     },
     "autoload": {
-        "files": [
-            "src/autoload.php"
-        ] 
+        "psr-4": {
+            "MiniFastORM\\": "src/MiniFastORM/"
+        }
     }
 }

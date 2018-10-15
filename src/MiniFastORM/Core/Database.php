@@ -1,5 +1,10 @@
 <?php
 
+namespace MiniFastORM\Core;
+
+use \Nette\PhpGenerator\PhpLiteral;
+use \Symfony\Component\Filesystem\Filesystem;
+
 class Database
 {
     private $db;
@@ -40,7 +45,7 @@ class Database
     {
         // Getting content of schema
         $xmlString = file_get_contents($file);
-        $xml = new SimpleXMLElement($xmlString);
+        $xml = new \SimpleXMLElement($xmlString);
 
         // Convert XML into PHP array
         $json = json_encode($xml);
@@ -231,148 +236,135 @@ class Database
                 $i++;
             }
         }
+        
+        $filesystem = new Filesystem();
+        $filesystem->dumpFile('database.sql', $this->sql);
+    }
+    
+    /**
+     * Translates a string with underscores into camel case (e.g. first_name -&gt; firstName)
+     * @param    string   $str                     String in underscore format
+     * @param    bool     $capitalise_first_char   If true, capitalise the first char in $str
+     * @return   string                            $str translated into camel caps
+     */
+    protected function toCamelCase($str, $capitalise_first_char = false) {
+        if ($capitalise_first_char) {
+            $str[0] = strtoupper($str[0]);
+        }
+        
+        $func = create_function('$c', 'return strtoupper($c[1]);');
+        return preg_replace_callback('/_([a-z])/', $func, $str);
     }
     
     /**
      * Create all classes based on database
      */
-    public function createClass()
+    public function createClasses()
     {
         $basepath = dirname(__FILE__);
-        $autoload = fopen($basepath . '/autoload.php', 'a+');
-        file_put_contents($basepath . '/autoload.php', '');
-        fwrite($autoload, "<?php\n");
-
-        @$this->mkdirR($basepath . '/minifast');
-        $base = fopen($basepath . '/minifast/Base.php', 'a+');
-        file_put_contents($basepath . '/minifast/Base.php', '');
-        fwrite($base, str_replace('__DB_NAME__', $this->dbName, file_get_contents($basepath . '/class/Base.php')));
-        fclose($base);
-        fwrite($autoload, "include_once dirname(__FILE__).'/minifast/Base.php';\n");
-
-        $baseQuery = fopen($basepath . '/minifast/BaseQuery.php', 'a+');
-        file_put_contents($basepath . '/minifast/BaseQuery.php', '');
-        fwrite($baseQuery, str_replace('__DB_NAME__', $this->dbName, file_get_contents($basepath . '/class/BaseQuery.php')));
-        fwrite($autoload, "include_once dirname(__FILE__).'/minifast/BaseQuery.php';\n");
-
+        $filesystem = new Filesystem();
+        $filesystem->mkdir($basepath . '/MiniFastORM');
+        $printer = new \Nette\PhpGenerator\PsrPrinter;
+        
+        // For each table
         foreach ($this->tables as $key => $table) {
-            $tableN = $key;
-            $tableName = $this->formatName($key);
-            $path = $basepath . '/minifast/' . $tableName . '.php';
-            $pathQuery = $basepath . '/minifast/' . $tableName . 'Query.php';
-            $file = fopen($path, 'a+');
-            $fileQuery = fopen($pathQuery, 'a+');
-            file_put_contents($path, '');
-            file_put_contents($pathQuery, '');
-
-            fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName.php';\n");
-            fwrite($autoload, "include_once dirname(__FILE__).'/minifast/$tableName" . "Query.php';\n");
-
-            // Writting start of files
-            $beginFile = file_get_contents($basepath . '/class/Child-Start.php');
-            $beginFileQuery = file_get_contents($basepath . '/class/ChildQuery-Start.php');
-            $beginFile = str_replace('__TABLE_FORMATED_NAME__', $tableName, $beginFile);
-            $beginFileQuery = str_replace('__TABLE_FORMATED_NAME__', $tableName, $beginFileQuery);
-            fwrite($file, $beginFile);
-            fwrite($fileQuery, $beginFileQuery);
-
-            // Writting constructors
-            $constructFile = file_get_contents($basepath . '/class/Child-Construct.php');
-            $constructFileQuery = file_get_contents($basepath . '/class/ChildQuery-Construct.php');
-            $constructFile = str_replace('__TABLE_NAME__', $key, $constructFile);
-            $constructFile = str_replace('__TABLE_FORMATED_NAME__', $tableName, $constructFile);
-            $constructFileQuery = str_replace('__TABLE_NAME__', $key, $constructFileQuery);
-            $constructFileQuery = str_replace('__TABLE_FORMATED_NAME__', $tableName, $constructFileQuery);
-            fwrite($file, $constructFile);
-            fwrite($fileQuery, $constructFileQuery);
-
-            $i = 0;
-            $nbColumns = sizeof($table);
-            fwrite($file, "\tprivate \$vars = [\n");
+            // Create files
+            $file = new \Nette\PhpGenerator\PhpFile;
+            $fileQuery = new \Nette\PhpGenerator\PhpFile;
             
-            foreach ($table as $column) {
-                $colName = $this->formatName($column['name']);
-
-                // File
-                $varsFile = file_get_contents($basepath . '/class/Child-Vars.php');
-                $varsFile = str_replace('__COLUMN_NAME__', $column['name'], $varsFile);
-                if (isset($column['foreign'])) {
-                    //echo $key;
-                    $str = "['table' => '" . $this->formatName($this->foreigns[$tableN][$column['foreign']]['foreign-table']) . "', 'col' => '" . $this->foreigns[$tableN][$column['foreign']]['foreign'] . "']";
-                    $varsFile = str_replace('__IS_FOREIGN__', $str, $varsFile);
-                } else {
-                    $varsFile = str_replace('__IS_FOREIGN__', 'false', $varsFile);
+            // Add namespace
+            $namespace = $file->addNamespace('MiniFastORM');
+            $namespaceQuery = $fileQuery->addNamespace('MiniFastORM');
+            
+            // Add classes
+            $class = $namespace->addClass($this->toCamelCase($key, true))
+                ->setExtends('\MiniFastORM\Core\Base');
+            $methodConstruct = $class->addMethod('__construct')
+                ->addBody('parent::__construct(?);', [$key]);
+            $methodGetColumns = $class->addMethod('getColumns')
+                ->addBody('return $this->vars;')
+                ->addComment('Fetch all columns from this class')
+                ->addComment('@return array All columns of this table');
+            
+            $classQuery = $namespaceQuery->addClass($this->toCamelCase($key, true) . 'Query')
+                ->setExtends('\MiniFastORM\Core\BaseQuery');
+            $methodQueryConstruct = $classQuery->addMethod('__construct')
+                ->addBody('parent::__construct(?);', [$key])
+                ->addBody('parent::setBase($this->base);');
+            $methodQueryCreate = $classQuery->addMethod('create')
+                ->setStatic()
+                ->setVisibility('protected')
+                ->addComment('Create a new instance of *' . $this->toCamelCase($key, true) . 'Query*')
+                ->addComment('@param  string $table The table name')
+                ->addComment('@return ' . $this->toCamelCase($key, true) . 'Query')
+                ->addBody('return new ?Query($table);', [new PhpLiteral($this->toCamelCase($key, true))])
+                ->addParameter('table', $key)
+                ->setTypeHint('string');
+            $methodQueryGetColumns = $classQuery->addMethod('getColumns')
+                ->addBody('$class = $this->base;')
+                ->addBody('$base = new $class();')
+                ->addBody('return $base->getColumns();')
+                ->addComment('Fetch all columns from the base class')
+                ->addComment('@return array All columns of this table');
+            
+            // Gathering information about vars
+            if (!empty($this->foreigns[$key])) {
+                foreach ($this->foreigns[$key] as $foreign) {
+                    $table[$foreign['local']]['foreign'] = $foreign;
                 }
-                $varsFile = str_replace('__COLUMN_TYPE__', $column['type'], $varsFile);
-                $varsFile = str_replace('__IS_REQUIRED__', (isset($column['required']) ? ($column['required'] ? 'true' : 'false') : 'false'), $varsFile);
-                $varsFile = str_replace('__IS_PRIMARY__', (isset($column['primaryKey']) ? ($column['primaryKey'] ? 'true' : 'false') : 'false'), $varsFile);
-
-                fwrite($file, $varsFile . (($i < $nbColumns - 1) ? ',':'') . "\n");
-
-                // FileQuery
-                $methodsQuery = file_get_contents($basepath . '/class/ChildQuery-Methods.php');
-                $methodsQuery = str_replace('__COLUMN_FORMATED_NAME__', $colName, $methodsQuery);
-                $methodsQuery = str_replace('__COLUMN_NAME__', $column['name'], $methodsQuery);
-                fwrite($fileQuery, $methodsQuery . "\n");
-                $i++;
             }
             
-            fwrite($file, "\t];\n");
-
-            foreach($table as $column)
-            {
-                $colName = $this->formatName($column['name']);
-                $methodsFile = file_get_contents($basepath . '/class/Child-Methods.php');
-                $methodsFile = str_replace('__COLUMN_FORMATED_NAME__', $colName, $methodsFile);
-                $methodsFile = str_replace('__COLUMN_NAME__', $column['name'], $methodsFile);
-                fwrite($file, $methodsFile . "\n");
+            // For each column
+            foreach ($table as $column) {
+                // Add methods for base
+                $methodSet = $class->addMethod('set' . $this->toCamelCase($column['name'], true))
+                    ->addBody('parent::set(?, $value);', [$column['name']])
+                    ->addBody('return $this;')
+                    ->addComment('Set `' . $column['name'] . '` in order to insert or update')
+                    ->addComment('@param $value The value to set')
+                    ->addParameter('value');
+                
+                // Add methods for baseQuery
+                $methodQuerySet = $classQuery->addMethod('set' . $this->toCamelCase($column['name'], true))
+                    ->addBody('parent::set(?, $value);', [$column['name']])
+                    ->addBody('return $this')
+                    ->addComment('Set `' . $column['name'] . '` in order to query')
+                    ->addComment('@param $value The value to set')
+                    ->addComment('@return ' . $this->toCamelCase($key, true) . 'Query The same instance')
+                    ->addParameter('value');
+                $methodQueryFindBy = $classQuery->addMethod('findBy' . $this->toCamelCase($column['name'], true))
+                    ->addBody('parent::findBy(?, $value);', [$column['name']])
+                    ->addBody('return $this;')
+                    ->addComment('Set ' . $column['name'] . ' in where clause')
+                    ->addComment('@param $value The value to set')
+                    ->addComment('@return ' . $this->toCamelCase($key, true) . 'Query The same instance')
+                    ->addParameter('value');
+                $methodQueryFilterBy = $classQuery->addMethod('filterBy' . $this->toCamelCase($column['name'], true))
+                    ->addBody('parent::filterBy(?, $value, $criteria);', [$column['name']])
+                    ->addBody('return $this;')
+                    ->addComment('Set ' . $column['name'] . ' in where clause')
+                    ->addComment('@param $value The value to set')
+                    ->addComment('@return ' . $this->toCamelCase($key, true) . 'Query The same instance');
+                $methodQueryFilterBy->addParameter('value');
+                $methodQueryFilterBy->addParameter('criteria', new PhpLiteral('parent::EQUALS'));
+                $methodQueryCount = $classQuery->addMethod('count')
+                    ->addBody('parent::count(?, $name);', [$column['name']])
+                    ->addBody('return $this')
+                    ->addComment('Count ' . $column['name'] . ' occurences')
+                    ->addComment('@param');
             }
-            fwrite($file, "}\n");
-            fwrite($fileQuery, "}\n");
-        }
-    }
-    
-    /**
-     * Format a name to call it proprely in classes
-     * @param  string $name The name to format
-     * @return string The formated name
-     */
-    public function formatName(string $name)
-    {
-        $newName = explode('_', $name);
-        $names = [];
-        foreach ($newName as $Name) {
-            $names[] = ucfirst(strtolower($Name));
-        }
+            
+            // Add properties
+            $class->addProperty('tableName', $key)
+                ->setVisibility('protected');
+            $class->addProperty('vars', $table)
+                ->setVisibility('protected');
+            
+            $classQuery->addProperty('base', $this->toCamelCase($key, true))
+                ->setVisibility('protected');
 
-        return implode($names);
-    }
-    
-    /**
-     * Open a file, clean it and fill it
-     * @param string $fileName The file path/name
-     * @param string $content  The string to be inserted in a file
-     */
-    public function writeFile(string $fileName, string $content = '')
-    {
-        $file = fopen(__DIR__ . '/' . $fileName, 'a+');
-        file_put_contents(__DIR__ . '/' . $fileName, '');
-        fwrite($file, $content);
-    }
-    
-    /**
-     * Create a directory and its subdirectories recursivly
-     * @param string $path The path to create
-     */
-    private function mkdirR($path)
-    {
-        $path = explode('/', $path);
-        $current = '';
-        foreach ($path as $dir) {
-            $current .= (!empty($current) ? '/':'') . $dir;
-            if (!file_exists($current)) {
-                mkdir($current);
-            }
+            $filesystem->dumpFile($basepath . '/MiniFastORM/' . $this->toCamelCase($key, true) . '.php', $printer->printFile($file));
+            $filesystem->dumpFile($basepath . '/MiniFastORM/' . $this->toCamelCase($key, true) . 'Query.php', $printer->printFile($fileQuery));
         }
     }
     
