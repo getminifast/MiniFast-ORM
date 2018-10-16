@@ -1,5 +1,14 @@
 <?php
 
+/*
+ * This file is part of the MiniFast Framework.
+ *
+ * (c) Vincent Bathelier <contact@getminifast.org>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace MiniFastORM\Core;
 
 class Base
