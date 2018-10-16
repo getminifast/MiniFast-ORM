@@ -13,7 +13,12 @@ namespace MiniFastORM\Core;
 
 class Connect
 {
-    protected $container = new Container();
+    protected $container;
+    
+    public function __construct()
+    {
+        $this->container = new Container();
+    }
     
     /**
      * Get a PDO connection
@@ -34,7 +39,7 @@ class Connect
                     }
                     
                     $config = $config['MiniFastORM']['database'];
-                    
+
                     $host = $config['host'];
                     $dbname = $config['dbname'];
                     $user = $config['user'];
@@ -49,7 +54,7 @@ class Connect
             }
         }
         
-        throw new Exception('MiniFast ORM is unable to connect to your database. Please check your config file (minifast.json).' . PHP_EOL);
+        throw new \Exception('MiniFast ORM is unable to connect to your database. Please check your config file (minifast.json).' . PHP_EOL);
         return null;
     }
     
@@ -60,12 +65,12 @@ class Connect
     public function getConfig()
     {
         $filesystem = $this->container->getFilesystem();
-        $configPath = __DIR__ . '/minifast.json';
+        $configPath = __DIR__ . '/../../../../../../minifast.json';
         
         if ($filesystem->exists($configPath)) {
-            return json_decode($configPath, true);
+            return json_decode(file_get_contents($configPath), true);
         } else {
-            throw new Exception('The MiniFast config file (minifast.json) is missing.' . PHP_EOL);
+            throw new \Exception('The MiniFast config file (minifast.json) is missing.' . PHP_EOL);
         }
         
         return null;
@@ -82,7 +87,7 @@ class Connect
         
         foreach ($params as $param) {
             if (!isset($config[$param])) {
-                throw new Exception("The parameter $param in the MiniFast config file is missing." . PHP_EOL);
+                throw new \Exception("The parameter $param in the MiniFast config file is missing." . PHP_EOL);
                 return false;
             }
         }

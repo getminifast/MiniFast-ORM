@@ -13,7 +13,7 @@ namespace MiniFastORM\Core;
 
 class Base
 {
-    protected $container = new Container();
+    protected $container;
     private $cols = [];
     private $values = [];
     private $table;
@@ -24,6 +24,7 @@ class Base
 
     public function __construct(string $table)
     {
+        $this->container = new Container();
         $this->co = $this->container->getConnection();
 
         if (!empty($table)) {
