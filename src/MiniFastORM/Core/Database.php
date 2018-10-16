@@ -268,9 +268,8 @@ class Database
      */
     public function createClasses()
     {
-        $basepath = dirname(__FILE__);
+        $basepath = dirname(dirname(__FILE__));
         $filesystem = new Filesystem();
-        $filesystem->mkdir($basepath . '/MiniFastORM');
         $printer = new \Nette\PhpGenerator\PsrPrinter;
         
         // For each table
@@ -370,8 +369,8 @@ class Database
             $classQuery->addProperty('base', $this->toCamelCase($key, true))
                 ->setVisibility('protected');
 
-            $filesystem->dumpFile($basepath . '/MiniFastORM/' . $this->toCamelCase($key, true) . '.php', $printer->printFile($file));
-            $filesystem->dumpFile($basepath . '/MiniFastORM/' . $this->toCamelCase($key, true) . 'Query.php', $printer->printFile($fileQuery));
+            $filesystem->dumpFile($basepath . '/' . $this->toCamelCase($key, true) . '.php', $printer->printFile($file));
+            $filesystem->dumpFile($basepath . '/' . $this->toCamelCase($key, true) . 'Query.php', $printer->printFile($fileQuery));
         }
     }
     
