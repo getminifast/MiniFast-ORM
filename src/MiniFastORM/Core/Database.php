@@ -228,7 +228,7 @@ class Database
                 $this->sql .= "`$name`";
                 $this->sql .= " $type";
                 $this->sql .= (!empty($size) ? " ($size)":'');
-                $this->sql .= ($primaryKey ? ' PRIMARY KEY' : '') . ($autoIncrement ? ' AUTO_INCREMENT' : '') . ($required ? ' NOT NULL' : '') . (strlen($default) != 0 ? " DEFAULT `$default`": '');
+                $this->sql .= ($primaryKey ? ' PRIMARY KEY' : '') . ($autoIncrement ? ' AUTO_INCREMENT' : '') . ($required ? ' NOT NULL' : '') . (strlen($default) != 0 ? " DEFAULT '$default'": '');
                 $i++;
             }
             $this->sql .= "\n) ENGINE=InnoDB;\n\n";
@@ -253,13 +253,14 @@ class Database
      * @param    bool     $capitalise_first_char   If true, capitalise the first char in $str
      * @return   string                            $str translated into camel caps
      */
-    protected function toCamelCase($str, $capitalise_first_char = false)
+    public static function toCamelCase($str, $capitalise_first_char = false)
     {
         if ($capitalise_first_char) {
             $str[0] = strtoupper($str[0]);
         }
         
-        $func = create_function('$c', 'return strtoupper($c[1]);');
+        // TODO find an alternative to create_function
+        $func = @create_function('$c', 'return strtoupper($c[1]);');
         return preg_replace_callback('/_([a-z])/', $func, $str);
     }
     
@@ -299,7 +300,7 @@ class Database
                 ->addBody('parent::setBase($this->base);');
             $methodQueryCreate = $classQuery->addMethod('create')
                 ->setStatic()
-                ->setVisibility('protected')
+                ->setVisibility('public')
                 ->addComment('Create a new instance of *' . $this->toCamelCase($key, true) . 'Query*')
                 ->addComment('@param  string $table The table name')
                 ->addComment('@return ' . $this->toCamelCase($key, true) . 'Query')
@@ -333,7 +334,7 @@ class Database
                 // Add methods for baseQuery
                 $methodQuerySet = $classQuery->addMethod('set' . $this->toCamelCase($column['name'], true))
                     ->addBody('parent::set(?, $value);', [$column['name']])
-                    ->addBody('return $this')
+                    ->addBody('return $this;')
                     ->addComment('Set `' . $column['name'] . '` in order to query')
                     ->addComment('@param $value The value to set')
                     ->addComment('@return ' . $this->toCamelCase($key, true) . 'Query The same instance')
@@ -353,11 +354,13 @@ class Database
                     ->addComment('@return ' . $this->toCamelCase($key, true) . 'Query The same instance');
                 $methodQueryFilterBy->addParameter('value');
                 $methodQueryFilterBy->addParameter('criteria', new PhpLiteral('parent::EQUALS'));
-                $methodQueryCount = $classQuery->addMethod('count')
+                $methodQueryCount = $classQuery->addMethod('count' . $column['name'])
                     ->addBody('parent::count(?, $name);', [$column['name']])
-                    ->addBody('return $this')
+                    ->addBody('return $this;')
                     ->addComment('Count ' . $column['name'] . ' occurences')
                     ->addComment('@param');
+                $methodQueryCount->addParameter('name', '')
+                    ->setTypeHint('string');
             }
             
             // Add properties

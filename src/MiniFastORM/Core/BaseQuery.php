@@ -13,7 +13,7 @@ namespace MiniFastORM\Core;
 
 class BaseQuery
 {
-    protected $container = new Container();
+    protected $container;
     private $co;
     private $table;
     private $base;
@@ -36,6 +36,7 @@ class BaseQuery
 
     public function __construct($table)
     {
+        $this->container = new Container();
         $this->co = $this->container->getConnection();
 
         if (!empty($table)) {
@@ -89,7 +90,7 @@ class BaseQuery
 
     private function fetchForeign(string $col, $value, string $table)
     {
-        $base = $table . 'Query';
+        $base = '\MiniFastORM\\' . Database::toCamelCase($table, true) . 'Query';
         $base = $base::create();
         $filter = 'FilterBy' . self::formatName($col);
         $base->$filter($value);
@@ -101,14 +102,14 @@ class BaseQuery
     public function find(string $table = '', string $class = '')
     {
         $table = !empty($table) ? $table : $this->table;
-        $class = !empty($class) ? $class : $this->base;
-        $fetch = self::createFind($table)->fetch(PDO::FETCH_NAMED); // We need foreign values
+        $class = '\MiniFastORM\\' . (!empty($class) ? $class : $this->base);
+        $fetch = self::createFind($table)->fetch(\PDO::FETCH_NAMED); // We need foreign values
         $base = new $class();
         $columns = $base->getColumns();
 
         foreach ($columns as $key => $col) {
-            if ($col['foreign']) {
-                $fetch[$key] = self::fetchForeign($col['foreign']['col'], $fetch[$key], $col['foreign']['table']);
+            if (isset($col['foreign'])) {
+                $fetch[$key] = self::fetchForeign($col['foreign']['foreign'], $fetch[$key], $col['foreign']['foreign-table']);
             }
         }
 
@@ -118,15 +119,17 @@ class BaseQuery
     public function findAll(string $table = '', string $class = '')
     {
         $table = !empty($table) ? $table : $this->table;
-        $class = !empty($class) ? $class : $this->base;
-        $fetchAll = self::createFind($table)->fetchAll(PDO::FETCH_NAMED);
+        $class = '\MiniFastORM\\' . (!empty($class) ? $class : $this->base);
+        $fetchAll = self::createFind($table)->fetchAll(\PDO::FETCH_NAMED);
         $base = new $class();
         $columns = $base->getColumns();
         $fks = [];
 
         foreach ($columns as $key => $col) {
-            if ($col['foreign']) {
-                $fks[$key] = $col['foreign'];
+            if (isset($col['foreign'])) {
+                if ($col['foreign']) {
+                    $fks[$key] = $col['foreign'];
+                }
             }
         }
 

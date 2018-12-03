@@ -50,7 +50,6 @@ class Base
      */
     public function save()
     {
-
         // If data has been set
         if (!empty($this->table) and !empty($this->cols) and !empty($this->values)) {
             $query = self::INSERT . ' ' . $this->table . '(' . implode(', ', $this->cols) . ') ' . self::VALUES . '(:' . implode(', :', $this->cols) . ')';
@@ -65,6 +64,6 @@ class Base
     
     public static function now()
     {
-        return date('DD-MM-AAAA hh:mm:ss');
+        return date('Y-m-d h:m:s');
     }
 }
